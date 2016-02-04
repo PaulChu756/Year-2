@@ -65,13 +65,9 @@ void Application::draw()
 
 	for (int i = 0; i < 21; ++i)
 	{
-		Gizmos::addLine(vec3(-10 + i, 0, 10), 
-						vec3(-10 + i, 0, -10), 
-						i == 10 ? white : black);
+		Gizmos::addLine(vec3(-10 + i, 0, 10), vec3(-10 + i, 0, -10), i == 10 ? white : black);
 		 
-		Gizmos::addLine(vec3(10, 0, -10 + i), 
-						vec3(-10, 0, -10 + i), 
-						i == 10 ? white : black);
+		Gizmos::addLine(vec3(10, 0, -10 + i), vec3(-10, 0, -10 + i), i == 10 ? white : black);
 	}
 
 	if (Application::m_x <= 0 && Application::m_y <= 0)

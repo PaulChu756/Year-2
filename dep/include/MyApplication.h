@@ -25,5 +25,4 @@ private:
 	GLFWwindow *window;
 	mat4 m_view;
 	mat4 m_projection;
-	
 };
