@@ -89,10 +89,11 @@
 unsigned int m_VAO; // Vertex Array Object
 unsigned int m_VBO; //Vertex Buffer Object
 unsigned int m_IBO; //Index Buffer Object
+unsigned int m_shader;
 
 unsigned int m_programID;
 mat4 m_view = glm::lookAt(vec3(10, 10, 10), vec3(0), vec3(0, 1, 0));
-mat4 m_projection = glm::perspective(glm::pi<float>()*0.25f, 16 / 9.f, 0.1f, 1000.f);
+mat4 m_projection = glm::perspective(glm::pi<float>()*0.25f, 16 / 9.f, 0.1f, 1000.f); // Don't know the first one, 16 by 9 is the ratio, 0.1f inner, 1000f is outer.
 mat4 m_projectionViewMatrix = m_projection * m_view;
 
 struct Vertex 
@@ -147,18 +148,22 @@ void generateGrid(unsigned int rows, unsigned int cols)
 	glBindVertexArray(m_VAO);
 	unsigned int indexCount = (rows - 1) * (cols - 1) * 6;
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
 
 	glBufferData(GL_ARRAY_BUFFER, (rows * cols) * sizeof(Vertex), aoVertices, GL_STATIC_DRAW);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, (rows - 1) * (cols - 1) * 6 * sizeof(unsigned int), auiIndices, GL_STATIC_DRAW);
+
+	glBindAttribLocation(0, m_shader, "Position");
+	glBindAttribLocation(1, m_shader, "Colour");
 	
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(vec4)));
+
+	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
 
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -221,7 +226,10 @@ int main()
 		{
 			while (theApp->update() == true)
 			{
-				theApp->draw();
+				/*theApp->draw();*/
+
+				createShader();
+				generateGrid(5, 5);
 			}
 			theApp->shutdown();
 		}
