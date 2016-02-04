@@ -86,21 +86,20 @@
 //	}
 //}
 
-struct Vertex 
-{
-	vec4 position;
-	vec4 colour;
-};
-
-// our vertex and index buffers
-unsigned int m_VAO;
-unsigned int m_VBO;
-unsigned int m_IBO;
+unsigned int m_VAO; // Vertex Array Object
+unsigned int m_VBO; //Vertex Buffer Object
+unsigned int m_IBO; //Index Buffer Object
 
 unsigned int m_programID;
 mat4 m_view = glm::lookAt(vec3(10, 10, 10), vec3(0), vec3(0, 1, 0));
 mat4 m_projection = glm::perspective(glm::pi<float>()*0.25f, 16 / 9.f, 0.1f, 1000.f);
 mat4 m_projectionViewMatrix = m_projection * m_view;
+
+struct Vertex 
+{
+	vec4 position;
+	vec4 colour;
+};
 
 // Creating grid
 void generateGrid(unsigned int rows, unsigned int cols)
@@ -136,11 +135,9 @@ void generateGrid(unsigned int rows, unsigned int cols)
 		}
 	}
 
-	//Vertex Buffer Object
+	// Create and bind buffers to a vertex array object
 	glGenBuffers(1, &m_VBO);
-	//Index Buffer Object
 	glGenBuffers(1, &m_IBO);
-	//Vertex Array Object
 	glGenVertexArrays(1, &m_VAO);
 
 	glUseProgram(m_programID);
@@ -176,7 +173,7 @@ void createShader()
 	//Create Shaders
 	const char* vsSource = "#version 410\n \
 							layout(location=0) in vec4 Position; \
-							layout(locaition=1 in vec4 Colour; \
+							layout(locaition=1) in vec4 Colour; \
 							out vec4 vColour; \
 							uniform mat4 ProjectionView; \
 							void main() { vColour = Colour; gl_Position = ProjectionView * Position; }";
@@ -190,7 +187,7 @@ void createShader()
 
 	glShaderSource(vertexShader, 1, (const char**)&vsSource, 0);
 	glCompileShader(vertexShader);
-	glShaderSource(fragmentShader, 1, (const char**)&vsSource, 0);
+	glShaderSource(fragmentShader, 1, (const char**)&fsSource, 0);
 	glCompileShader(fragmentShader);
 
 	m_programID = glCreateProgram();
@@ -219,14 +216,12 @@ int main()
 	/*std::vector<tinyobj::shape_t> shapes;*/
 
 		Application *theApp = new Application();
-		
+
 		if(theApp->startup() == true) 
 		{
 			while (theApp->update() == true)
 			{
 				theApp->draw();
-				generateGrid(5, 5);
-				createShader();
 			}
 			theApp->shutdown();
 		}
