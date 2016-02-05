@@ -19,14 +19,13 @@ public :
 	int update();
 	void draw();
 	void shutdown();
+	GLFWwindow *window;
 private:
 	int m_x;
 	int m_y;
 	float m_Timer;
-	GLFWwindow *window;
 	mat4 m_view;
 	mat4 m_projection;
-
 	vec4 m_White;
 	vec4 m_Yellow;
 	vec4 m_Black;

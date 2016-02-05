@@ -14,7 +14,7 @@
     <ClCompile Include="src\Gizmos.cpp" />
     <ClCompile Include="src\gl_core_4_4.c" />
     <ClCompile Include="src\MyApplication.cpp" />
-    <ClCompile Include="src\Source.cpp" />
+    <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\test.cc" />
     <ClCompile Include="src\tiny_obj_loader.cpp" />
   </ItemGroup>

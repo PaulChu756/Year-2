@@ -34,7 +34,10 @@ int Application::startup()
 	window = glfwCreateWindow(1280, 720, "Computer Graphics", nullptr, nullptr);
 
 	if (window == nullptr)
+	{
 		glfwTerminate();
+		return -2;
+	}
 
 	glfwMakeContextCurrent(window);
 
@@ -51,9 +54,7 @@ int Application::startup()
 	auto minor = ogl_GetMinorVersion();
 	printf_s("GL: %i.%i\n", major, minor);
 
-	glEnable(GL_DEPTH_TEST);
-	glClearColor(0.25f, 0.25f, 0.25f, 1);
-	Gizmos::create();
+	//Gizmos::create();
 
 	return 1;
 }
@@ -66,52 +67,51 @@ int Application::update()
 	m_Timer += dt / 15;
 
 	m_view = glm::lookAt(vec3(10, 10, 10), vec3(0), vec3(0, 1, 0));
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	Gizmos::clear();
-	Gizmos::addTransform(glm::mat4(1));
+	//Gizmos::clear();
+	//Gizmos::addTransform(glm::mat4(1));
 
-	// All the Black squares with the 4 long white lines to put them in Q's
-	vec4 white(1);
-	vec4 black(0, 0, 0, 1);
-	for (int i = 0; i < 21; ++i)
-	{
-		Gizmos::addLine(vec3(-10 + i, 0, 10), vec3(-10 + i, 0, -10), i == 10 ? white : black);
-		Gizmos::addLine(vec3(10, 0, -10 + i), vec3(-10, 0, -10 + i), i == 10 ? white : black);
-	}
+	//// All the Black squares with the 4 long white lines to put them in Q's
+	//vec4 white(1);
+	//vec4 black(0, 0, 0, 1);
+	//for (int i = 0; i < 21; ++i)
+	//{
+	//	Gizmos::addLine(vec3(-10 + i, 0, 10), vec3(-10 + i, 0, -10), i == 10 ? white : black);
+	//	Gizmos::addLine(vec3(10, 0, -10 + i), vec3(-10, 0, -10 + i), i == 10 ? white : black);
+	//}
 
-	// If you look at many of the Gizmo add methods that have a default parameter for a mat4 pointer that 
-	// is nullptr or mat4(1) by default.This parameter can help you spin the planets and moons
+	//// If you look at many of the Gizmo add methods that have a default parameter for a mat4 pointer that 
+	//// is nullptr or mat4(1) by default.This parameter can help you spin the planets and moons
 
-	// Color is a vec4 Red, green, blue and alpha
+	//// Color is a vec4 Red, green, blue and alpha
 
-	// Sun just rotates
-	mat4 sun = PlanetOrbit(m_Timer, 0, 0);
-	Gizmos::addSphere(vec3(sun[1].x, sun[1].y, sun[1].z), 1.5f, 10, 10, planetColors[9], &sun);
+	//// Sun just rotates
+	//mat4 sun = PlanetOrbit(m_Timer, 0, 0);
+	//Gizmos::addSphere(vec3(sun[1].x, sun[1].y, sun[1].z), 1.5f, 10, 10, planetColors[9], &sun);
 
-	for (int i = 0; i < 9; i++)
-	{
-		if (i == 6 || i == 7)
-		{
-			mat4 planetMatrix = sun * PlanetOrbit(m_Timer / (float)i, 2 * i, m_Timer * (float)i);
-			Gizmos::addSphere(vec3(planetMatrix[3].x, planetMatrix[3].y, planetMatrix[3].z), .5f, 10, 10, planetColors[i - 1], &planetMatrix);
-		}
+	//for (int i = 0; i < 9; i++)
+	//{
+	//	if (i == 6 || i == 7)
+	//	{
+	//		mat4 planetMatrix = sun * PlanetOrbit(m_Timer / (float)i, 2 * i, m_Timer * (float)i);
+	//		Gizmos::addSphere(vec3(planetMatrix[3].x, planetMatrix[3].y, planetMatrix[3].z), .5f, 10, 10, planetColors[i - 1], &planetMatrix);
+	//	}
 
-		if (i == 8)
-		{
-			mat4 planetMatrix = sun * PlanetOrbit(m_Timer / (float)i, 2 * i, m_Timer * (float)i);
-			Gizmos::addSphere(vec3(planetMatrix[3].x, planetMatrix[3].y, planetMatrix[3].z), .5f, 10, 10, planetColors[3], &planetMatrix);
-		}
+	//	if (i == 8)
+	//	{
+	//		mat4 planetMatrix = sun * PlanetOrbit(m_Timer / (float)i, 2 * i, m_Timer * (float)i);
+	//		Gizmos::addSphere(vec3(planetMatrix[3].x, planetMatrix[3].y, planetMatrix[3].z), .5f, 10, 10, planetColors[3], &planetMatrix);
+	//	}
 
-		mat4 planetMatrix = sun * PlanetOrbit(m_Timer / (float)i, 2 * i, m_Timer * (float)i);
-		Gizmos::addSphere(vec3(planetMatrix[3].x, planetMatrix[3].y, planetMatrix[3].z), .5f, 10, 10, planetColors[i], &planetMatrix);
-	}
+	//	mat4 planetMatrix = sun * PlanetOrbit(m_Timer / (float)i, 2 * i, m_Timer * (float)i);
+	//	Gizmos::addSphere(vec3(planetMatrix[3].x, planetMatrix[3].y, planetMatrix[3].z), .5f, 10, 10, planetColors[i], &planetMatrix);
+	//}
 	return true;
 }
 
 void Application::draw()
 {
-	Gizmos::draw(m_projection  * m_view);
+	//Gizmos::draw(m_projection  * m_view);
 	glfwSwapBuffers(window);
 	glfwPollEvents();
 }
@@ -119,7 +119,7 @@ void Application::draw()
 void Application::shutdown()
 {
 	std::printf("shutting down...");
-	Gizmos::destroy();
+	//Gizmos::destroy();
 	glfwDestroyWindow(window);
 	glfwTerminate();
 }
