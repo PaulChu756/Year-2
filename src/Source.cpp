@@ -227,13 +227,11 @@ int main()
 			while (theApp->update() == true)
 			{
 				/*theApp->draw();*/
-
-				createShader();
+				//createShader();
 				generateGrid(5, 5);
 			}
 			theApp->shutdown();
 		}
-
 		delete theApp;
 	return 0;
 }
