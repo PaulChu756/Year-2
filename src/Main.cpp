@@ -96,6 +96,40 @@ unsigned int m_IBO; //Index Buffer Object
 unsigned int m_shader;
 unsigned int m_programID;
 
+namespace tinyobj 
+{
+	typedef struct mesh_t
+	{
+		std::vector<float> positions;
+		std::vector<float> normals;
+		std::vector<float> texcoords;
+		std::vector<unsigned int> indices;
+		std::vector <int> material_ids;
+	}; // What does this mesh_t mean?
+
+	typedef struct shape_t
+	{
+		std::string name;
+		mesh_t mesh;
+	};
+
+	struct OpenGLInfo
+	{
+		unsigned int m_VAO;
+		unsigned int m_VBO;
+		unsigned int m_IBO;
+		unsigned int m_index_count;
+	};
+
+	std::vector<OpenGLInfo> m_gl_info;
+	void createOpenGLBuffer(std::vector<tinyobj::shape_t> &shapes)
+	{
+		unsigned int mesh_index = 0;
+		unsigned int float_count = shapes[mesh_index].mesh.positions.size();
+	}
+
+}
+
 struct MyVertex
 {
 	float x, y, z;		//Vertex
@@ -155,7 +189,7 @@ void Shader()
 
 int main()
 {
-	mat4 m_view = glm::lookAt(vec3(10, 10, 10), vec3(0), vec3(0, 1, 0));
+	mat4 m_view = glm::lookAt(vec3(0, 0, 10), vec3(0), vec3(0, 1, 0));
 	mat4 m_projection = glm::perspective(glm::pi<float>()*0.25f, 16 / 9.f, 0.1f, 1000.f); // Don't know the first one, 16 by 9 is the ratio, 0.1f inner, 1000f is outer.
 	mat4 m_projectionViewMatrix = m_projection * m_view;
 
@@ -184,6 +218,7 @@ int main()
 	auto major = ogl_GetMajorVersion();
 	auto minor = ogl_GetMinorVersion();
 	printf_s("GL: %i.%i\n", major, minor);
+
 	//------------------------------------------
 	//------------------------------------------
 
@@ -193,25 +228,25 @@ int main()
 	//------------------------------------------
 
 	// These are the points to make the shape of the triangle, but can be used to make something else like a sqaure
-	MyVertex pvertex[6];
+	MyVertex pvertex[4];
 	//Vertex 0 
 	pvertex[0].x = 0.0;
 	pvertex[0].y = 0.0;
 	pvertex[0].z = 0.0;
 
 	//Vertex 1
-	pvertex[1].x = 5.0;
-	pvertex[1].y = 0.0;
+	pvertex[1].x = 0.0;
+	pvertex[1].y = 3.0;
 	pvertex[1].z = 0.0;
 
 	//Vertex 2
-	pvertex[2].x = 0.0;
-	pvertex[2].y = 5.0;
+	pvertex[2].x = 3.0;
+	pvertex[2].y = 3.0;
 	pvertex[2].z = 0.0;
 
 	//Vertex 3
-	pvertex[3].x = 5.0;
-	pvertex[3].y = 5.0;
+	pvertex[3].x = 3.0;
+	pvertex[3].y = 0.0;
 	pvertex[3].z = 0.0;
 
 	// Create and bind buffers to a vertex array object
@@ -221,7 +256,7 @@ int main()
 
 	glGenBuffers(1, &m_VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(MyVertex) * 3, &pvertex[0].x, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(MyVertex) * 4, pvertex, GL_STATIC_DRAW);
 
 	unsigned int pindices[6];
 	//First Triangle
@@ -230,14 +265,14 @@ int main()
 	pindices[2] = 2;
 
 	//Second Triangle
-	pindices[3] = 3;
-	pindices[4] = 1;
-	pindices[5] = 2;
+	pindices[3] = 0;
+	pindices[4] = 2;
+	pindices[5] = 3;
 
 
 	glGenBuffers(1, &m_IBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * 4, pindices, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * 6, pindices, GL_STATIC_DRAW);
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(MyVertex), BUFFER_OFFSET(0));
 	glEnableVertexAttribArray(0);
@@ -257,7 +292,7 @@ int main()
 	glUniformMatrix4fv(projectionViewUniform, 1, false, glm::value_ptr(m_projectionViewMatrix));
 
 	glBindVertexArray(m_VAO);
-	glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, BUFFER_OFFSET(0));
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(0));
 	glBindVertexArray(0);
 
 	glfwSwapBuffers(window);
