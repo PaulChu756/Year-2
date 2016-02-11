@@ -270,25 +270,21 @@ int main()
 	std::vector <tinyobj::material_t> materials;
 	std::string err;
 	tinyobj::LoadObj(shapes, materials, err, "./model/dragon.obj");
-	tinyobj::LoadObj(shapes, materials, err, "./model/bunny.obj");
-	tinyobj::LoadObj(shapes, materials, err, "./model/buddha.obj");
+	//tinyobj::LoadObj(shapes, materials, err, "./model/bunny.obj");
+	//tinyobj::LoadObj(shapes, materials, err, "./model/buddha.obj");
 
 	Window();
 	Shader();
 	
-	while (glfwWindowShouldClose(window) == false && glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS)
-	{
-		glClearColor(0.25f, 0.25f, 0.25f, 1);
-		glEnable(GL_DEPTH_TEST);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClearColor(0.25f, 0.25f, 0.25f, 1);
+	glEnable(GL_DEPTH_TEST);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		createOpenGLBuffer(shapes);
-		//createTriangle();
+	createOpenGLBuffer(shapes);
 
-		glfwSwapBuffers(window);
-		glfwPollEvents();
-	}
-
+	glfwSwapBuffers(window);
+	glfwPollEvents();
+	system("pause");
 	glfwDestroyWindow(window);
 	glfwTerminate();
 	return 0;
