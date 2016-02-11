@@ -57,64 +57,6 @@ struct MyVertex
 						/*vec4 position; vec4 colour;*/
 };
 
-void createOpenGLBuffer(std::vector<tinyobj::shape_t> &shapes)
-{
-	m_gl_info.resize(shapes.size());
-	for (unsigned int mesh_index = 0; mesh_index < shapes.size(); ++mesh_index)
-	{
-		glGenVertexArrays(1, &m_gl_info[mesh_index].m_VAO);
-		glGenBuffers(1, &m_gl_info[mesh_index].m_VBO);
-		glGenBuffers(1, &m_gl_info[mesh_index].m_IBO);
-		glBindVertexArray(m_gl_info[mesh_index].m_VAO);
-
-		unsigned int float_count = shapes[mesh_index].mesh.positions.size();
-		float_count += shapes[mesh_index].mesh.normals.size();
-		float_count += shapes[mesh_index].mesh.texcoords.size();
-
-		std::vector<float> vertex_data;
-		vertex_data.reserve(float_count);
-
-		vertex_data.insert(vertex_data.end(), 
-			shapes[mesh_index].mesh.positions.begin(), 
-			shapes[mesh_index].mesh.positions.end());
-
-		vertex_data.insert(vertex_data.end(),
-			shapes[mesh_index].mesh.normals.begin(),
-			shapes[mesh_index].mesh.normals.end());
-
-		m_gl_info[mesh_index].m_index_count = shapes[mesh_index].mesh.indices.size();
-
-		glBindBuffer(GL_ARRAY_BUFFER, m_gl_info[mesh_index].m_VBO);
-		glBufferData(GL_ARRAY_BUFFER, vertex_data.size() * sizeof(float), vertex_data.data(), GL_STATIC_DRAW);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_gl_info[mesh_index].m_IBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-			shapes[mesh_index].mesh.indices.size() * sizeof(unsigned int),
-			shapes[mesh_index].mesh.indices.data(), GL_STATIC_DRAW);
-
-		glEnableVertexAttribArray(0); // Position
-		glEnableVertexAttribArray(1); // normal data
-
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_TRUE, 0, (void*)(sizeof(float)*shapes[mesh_index].mesh.positions.size()));
-
-		glBindVertexArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-	}
-
-	glUseProgram(m_shader);
-	int view_proj_uniform = glGetUniformLocation(m_shader, "ProjectionView");
-	glUniformMatrix4fv(view_proj_uniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
-
-	for (unsigned int i = 0; i < m_gl_info.size(); ++i)
-	{
-		glBindVertexArray(m_gl_info[i].m_VAO);
-		glDrawElements(GL_TRIANGLES, m_gl_info[i].m_index_count, GL_UNSIGNED_INT, 0);
-	}
-}
-
 int Window()
 {
 	if (glfwInit() == false)
@@ -199,7 +141,7 @@ void Shader()
 	}
 }
 
-void createTriangle()
+void createShapes()
 {
 	// These are the points to make the shape of the triangle, but can be used to make something else like a sqaure
 	MyVertex pvertex[4];
@@ -264,6 +206,64 @@ void createTriangle()
 	glBindVertexArray(0);
 }
 
+void createOpenGLBuffer(std::vector<tinyobj::shape_t> &shapes)
+{
+	m_gl_info.resize(shapes.size());
+	for (unsigned int mesh_index = 0; mesh_index < shapes.size(); ++mesh_index)
+	{
+		glGenVertexArrays(1, &m_gl_info[mesh_index].m_VAO);
+		glGenBuffers(1, &m_gl_info[mesh_index].m_VBO);
+		glGenBuffers(1, &m_gl_info[mesh_index].m_IBO);
+		glBindVertexArray(m_gl_info[mesh_index].m_VAO);
+
+		unsigned int float_count = shapes[mesh_index].mesh.positions.size();
+		float_count += shapes[mesh_index].mesh.normals.size();
+		float_count += shapes[mesh_index].mesh.texcoords.size();
+
+		std::vector<float> vertex_data;
+		vertex_data.reserve(float_count);
+
+		vertex_data.insert(vertex_data.end(),
+			shapes[mesh_index].mesh.positions.begin(),
+			shapes[mesh_index].mesh.positions.end());
+
+		vertex_data.insert(vertex_data.end(),
+			shapes[mesh_index].mesh.normals.begin(),
+			shapes[mesh_index].mesh.normals.end());
+
+		m_gl_info[mesh_index].m_index_count = shapes[mesh_index].mesh.indices.size();
+
+		glBindBuffer(GL_ARRAY_BUFFER, m_gl_info[mesh_index].m_VBO);
+		glBufferData(GL_ARRAY_BUFFER, vertex_data.size() * sizeof(float), vertex_data.data(), GL_STATIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_gl_info[mesh_index].m_IBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+			shapes[mesh_index].mesh.indices.size() * sizeof(unsigned int),
+			shapes[mesh_index].mesh.indices.data(), GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray(0); // Position
+		glEnableVertexAttribArray(1); // normal data
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_TRUE, 0, (void*)(sizeof(float)*shapes[mesh_index].mesh.positions.size()));
+
+		glBindVertexArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	}
+
+	glUseProgram(m_shader);
+	int view_proj_uniform = glGetUniformLocation(m_shader, "ProjectionView");
+	glUniformMatrix4fv(view_proj_uniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
+
+	for (unsigned int i = 0; i < m_gl_info.size(); ++i)
+	{
+		glBindVertexArray(m_gl_info[i].m_VAO);
+		glDrawElements(GL_TRIANGLES, m_gl_info[i].m_index_count, GL_UNSIGNED_INT, 0);
+	}
+}
+
 int main()
 {
 	std::vector<tinyobj::shape_t> shapes;
@@ -281,6 +281,7 @@ int main()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	createOpenGLBuffer(shapes);
+	createShapes();
 
 	glfwSwapBuffers(window);
 	glfwPollEvents();
