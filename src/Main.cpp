@@ -145,11 +145,11 @@ void Shader()
 	}
 }
 
-//std::string readShader()
-//{
-//	std::ofstream shaderVertex;
-//	shaderVertex.open("vertexshader.txt");
-//}
+std::string readShader()
+{
+	std::ofstream shaderVertex;
+	shaderVertex.open("vertexshader.txt");
+}
 
 void createShapes()
 {
@@ -286,6 +286,7 @@ void DrawOBJ()
 		glDrawElements(GL_TRIANGLES, m_gl_info[i].m_index_count, GL_UNSIGNED_INT, 0);
 	}
 }
+
 int main()
 {
 	std::vector<tinyobj::shape_t> shapes;
@@ -298,7 +299,7 @@ int main()
 	Window();
 	Shader();
 
-	createOpenGLBuffer(shapes);
+	createOpenGLBuffer(shapes); // For Models
 	createShapes();
 
 	while (glfwWindowShouldClose(window) == false && glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS)
