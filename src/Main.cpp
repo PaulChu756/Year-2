@@ -7,10 +7,13 @@
 #include <vector>
 #include "MyApplication.h"
 #include "tiny_obj_loader.h"
+#include <iostream>
+#include <fstream>
 
 using glm::vec3;
 using glm::vec4;
 using glm::mat4;
+glm::mat4 modelMatrix;
 
 unsigned int m_VAO; // Vertex Array Object
 unsigned int m_VBO; //Vertex Buffer Object
@@ -101,7 +104,8 @@ void Shader()
 							layout(location=1) in vec4 Colour; \
 							out vec4 vColour; \
 							uniform mat4 ProjectionView; \
-							void main() { vColour = Colour; gl_Position = ProjectionView * Position; }";
+							uniform mat4 Model; \
+							void main() { vColour = Colour; gl_Position = ProjectionView * Model *  Position; }";
 
 	const char* fsSource = "#version 410\n \
 							in vec4 vColour; \
@@ -128,7 +132,7 @@ void Shader()
 
 	int success = GL_FALSE;
 	glGetProgramiv(m_shader, GL_LINK_STATUS, &success);
-	if (success = GL_FALSE) 
+	if (success = GL_FALSE)
 	{
 		int infoLogLength = 0;
 		glGetProgramiv(m_shader, GL_INFO_LOG_LENGTH, &infoLogLength);
@@ -140,6 +144,12 @@ void Shader()
 		delete[] infoLog;
 	}
 }
+
+//std::string readShader()
+//{
+//	std::ofstream shaderVertex;
+//	shaderVertex.open("vertexshader.txt");
+//}
 
 void createShapes()
 {
@@ -196,14 +206,6 @@ void createShapes()
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-	glUseProgram(m_shader); //// m_shader = Red Sqaure
-	unsigned int projectionViewUniform = glGetUniformLocation(m_shader, "ProjectionView");
-	glUniformMatrix4fv(projectionViewUniform, 1, false, glm::value_ptr(m_projectionViewMatrix));
-
-	glBindVertexArray(m_VAO);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(0));
-	glBindVertexArray(0);
 }
 
 void createOpenGLBuffer(std::vector<tinyobj::shape_t> &shapes)
@@ -253,17 +255,37 @@ void createOpenGLBuffer(std::vector<tinyobj::shape_t> &shapes)
 
 	}
 
+
+}
+
+void DrawSquare()
+{
 	glUseProgram(m_shader);
 	int view_proj_uniform = glGetUniformLocation(m_shader, "ProjectionView");
-	glUniformMatrix4fv(view_proj_uniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
+	int modelID = glGetUniformLocation(m_shader, "Model");
 
+	glUniformMatrix4fv(view_proj_uniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
+	glUniformMatrix4fv(modelID, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+
+	glBindVertexArray(m_VAO);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(0));
+	glBindVertexArray(0);
+}
+
+void DrawOBJ()
+{
+	glUseProgram(m_shader);
+	int view_proj_uniform = glGetUniformLocation(m_shader, "ProjectionView");
+	int modelID = glGetUniformLocation(m_shader, "Model");
+
+	glUniformMatrix4fv(view_proj_uniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
+	glUniformMatrix4fv(modelID, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 	for (unsigned int i = 0; i < m_gl_info.size(); ++i)
 	{
 		glBindVertexArray(m_gl_info[i].m_VAO);
 		glDrawElements(GL_TRIANGLES, m_gl_info[i].m_index_count, GL_UNSIGNED_INT, 0);
 	}
 }
-
 int main()
 {
 	std::vector<tinyobj::shape_t> shapes;
@@ -275,17 +297,27 @@ int main()
 
 	Window();
 	Shader();
-	
-	glClearColor(0.25f, 0.25f, 0.25f, 1);
-	glEnable(GL_DEPTH_TEST);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	createOpenGLBuffer(shapes);
 	createShapes();
 
-	glfwSwapBuffers(window);
-	glfwPollEvents();
-	system("pause");
+	while (glfwWindowShouldClose(window) == false && glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS)
+	{
+		glClearColor(0.25f, 0.25f, 0.25f, 1);
+		glEnable(GL_DEPTH_TEST);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		if (glfwGetKey(window, GLFW_KEY_1))
+			modelMatrix = glm::translate(modelMatrix, glm::vec3(1, 0, 0));
+		if (glfwGetKey(window, GLFW_KEY_2))
+			modelMatrix = glm::translate(modelMatrix, glm::vec3(-1, 0, 0));
+
+		DrawOBJ();
+		DrawSquare();
+		
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+	}
 	glfwDestroyWindow(window);
 	glfwTerminate();
 	return 0;
