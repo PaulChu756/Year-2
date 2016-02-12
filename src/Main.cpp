@@ -326,10 +326,10 @@ int main()
 			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 1, 0));
 		if (glfwGetKey(window, GLFW_KEY_S))
 			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, -1, 0));
-		if (glfwGetKey(window, GLFW_KEY_Z))
-			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0, 1));
-		if (glfwGetKey(window, GLFW_KEY_X))
+		if (glfwGetKey(window, GLFW_KEY_Q))
 			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0, -1));
+		if (glfwGetKey(window, GLFW_KEY_E))
+			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0, 1));
 
 		DrawOBJ();
 		DrawSquare();
