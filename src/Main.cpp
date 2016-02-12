@@ -5,10 +5,10 @@
 #include <glm\glm.hpp>
 #include <glm\ext.hpp>
 #include <vector>
-#include "MyApplication.h"
 #include "tiny_obj_loader.h"
 #include <iostream>
 #include <fstream>
+#include <string>
 
 using glm::vec3;
 using glm::vec4;
@@ -96,21 +96,37 @@ int Window()
 	return 0;
 }
 
+std::string readShader(std::string rs)
+{
+	std::string line;
+	std::string allTheLines;
+	std::ifstream file;
+
+	file.open(rs);
+
+	if (file.is_open())
+	{
+		// As opening the file, the string line copies the first line and adds it to addingStrings
+		// while in a loop, it grabs all the information from that file and adds it together.
+		while (std::getline(file, line))
+		{
+			allTheLines += line + '\n';
+		}
+		std::cout << allTheLines;
+		file.close();
+	}
+
+	else std::cout << "Unable to open file";
+
+	return allTheLines;
+}
+
 void Shader()
 {
-	//Create Shaders
-	const char* vsSource = "#version 410\n \
-							layout(location=0) in vec4 Position; \
-							layout(location=1) in vec4 Colour; \
-							out vec4 vColour; \
-							uniform mat4 ProjectionView; \
-							uniform mat4 Model; \
-							void main() { vColour = Colour; gl_Position = ProjectionView * Model *  Position; }";
-
-	const char* fsSource = "#version 410\n \
-							in vec4 vColour; \
-							out vec4 FragColor; \
-							void main() { FragColor = vColour; }";
+	std::string readVS = readShader("vertexshader.txt");
+	std::string readFS = readShader("fragmentshader.txt");
+	const char* vsSource = readVS.c_str();
+	const char* fsSource = readFS.c_str();
 
 	unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -144,12 +160,6 @@ void Shader()
 		delete[] infoLog;
 	}
 }
-
-//std::string readShader()
-//{
-//	std::ofstream shaderVertex;
-//	shaderVertex.open("vertexshader.txt");
-//}
 
 void createShapes()
 {
@@ -280,6 +290,7 @@ void DrawOBJ()
 
 	glUniformMatrix4fv(view_proj_uniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
 	glUniformMatrix4fv(modelID, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+
 	for (unsigned int i = 0; i < m_gl_info.size(); ++i)
 	{
 		glBindVertexArray(m_gl_info[i].m_VAO);
