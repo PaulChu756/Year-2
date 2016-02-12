@@ -145,11 +145,11 @@ void Shader()
 	}
 }
 
-std::string readShader()
-{
-	std::ofstream shaderVertex;
-	shaderVertex.open("vertexshader.txt");
-}
+//std::string readShader()
+//{
+//	std::ofstream shaderVertex;
+//	shaderVertex.open("vertexshader.txt");
+//}
 
 void createShapes()
 {
@@ -308,10 +308,14 @@ int main()
 		glEnable(GL_DEPTH_TEST);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		if (glfwGetKey(window, GLFW_KEY_1))
-			modelMatrix = glm::translate(modelMatrix, glm::vec3(1, 0, 0));
-		if (glfwGetKey(window, GLFW_KEY_2))
+		if (glfwGetKey(window, GLFW_KEY_A))
 			modelMatrix = glm::translate(modelMatrix, glm::vec3(-1, 0, 0));
+		if (glfwGetKey(window, GLFW_KEY_D))
+			modelMatrix = glm::translate(modelMatrix, glm::vec3(1, 0, 0));
+		if (glfwGetKey(window, GLFW_KEY_W))
+			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 1, 0));
+		if (glfwGetKey(window, GLFW_KEY_S))
+			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, -1, 0));
 
 		DrawOBJ();
 		DrawSquare();
