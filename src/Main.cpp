@@ -125,6 +125,7 @@ void Shader()
 {
 	std::string readVS = readShader("vertexshader.txt");
 	std::string readFS = readShader("fragmentshader.txt");
+
 	const char* vsSource = readVS.c_str();
 	const char* fsSource = readFS.c_str();
 
@@ -262,10 +263,7 @@ void createOpenGLBuffer(std::vector<tinyobj::shape_t> &shapes)
 		glBindVertexArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
 	}
-
-
 }
 
 void DrawSquare()
@@ -303,6 +301,7 @@ int main()
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector <tinyobj::material_t> materials;
 	std::string err;
+
 	tinyobj::LoadObj(shapes, materials, err, "./model/dragon.obj");
 	//tinyobj::LoadObj(shapes, materials, err, "./model/bunny.obj");
 	//tinyobj::LoadObj(shapes, materials, err, "./model/buddha.obj");
@@ -327,6 +326,10 @@ int main()
 			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 1, 0));
 		if (glfwGetKey(window, GLFW_KEY_S))
 			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, -1, 0));
+		if (glfwGetKey(window, GLFW_KEY_Z))
+			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0, 1));
+		if (glfwGetKey(window, GLFW_KEY_X))
+			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0, -1));
 
 		DrawOBJ();
 		DrawSquare();
