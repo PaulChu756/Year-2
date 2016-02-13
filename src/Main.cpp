@@ -13,7 +13,6 @@
 using glm::vec3;
 using glm::vec4;
 using glm::mat4;
-glm::mat4 modelMatrix;
 
 unsigned int m_VAO; // Vertex Array Object
 unsigned int m_VBO; //Vertex Buffer Object
@@ -25,23 +24,9 @@ GLFWwindow *window;
 mat4 m_view;
 mat4 m_projection;
 mat4 m_projectionViewMatrix;
+mat4 modelMatrix;
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
-
-typedef struct mesh_t
-{
-	std::vector<float> positions;
-	std::vector<float> normals;
-	std::vector<float> texcoords;
-	std::vector<unsigned int> indices;
-	std::vector <int> material_ids;
-};
-
-typedef struct shape_t
-{
-	std::string name;
-	mesh_t mesh;
-};
 
 struct OpenGLInfo
 {
@@ -57,7 +42,6 @@ struct MyVertex
 {
 	float x, y, z;		//Vertex
 	float nx, ny, nz;	//Normal
-						/*vec4 position; vec4 colour;*/
 };
 
 int Window()
@@ -87,11 +71,6 @@ int Window()
 	auto major = ogl_GetMajorVersion();
 	auto minor = ogl_GetMinorVersion();
 	printf_s("GL: %i.%i\n", major, minor);
-
-	// Create window and camera
-	m_view = glm::lookAt(vec3(0, 0, 50), vec3(0), vec3(0, 1, 0));
-	m_projection = glm::perspective(glm::pi<float>()*0.25f, 16 / 9.f, 0.1f, 1000.f); // Don't know the first one, 16 by 9 is the ratio, 0.1f inner, 1000f is outer.
-	m_projectionViewMatrix = m_projection * m_view;
 
 	return 0;
 }
@@ -146,7 +125,8 @@ void Shader()
 	glBindAttribLocation(0, m_shader, "Position");
 	glBindAttribLocation(1, m_shader, "Colour");
 	glLinkProgram(m_shader);
-
+	
+	//Check if shader works (don't really need it)
 	int success = GL_FALSE;
 	glGetProgramiv(m_shader, GL_LINK_STATUS, &success);
 	if (success = GL_FALSE)
@@ -186,14 +166,7 @@ void createShapes()
 	pvertex[3].y = 0.0;
 	pvertex[3].z = 0.0;
 
-	// Create and bind buffers to a vertex array object
-	glGenVertexArrays(1, &m_VAO);
-	glBindVertexArray(m_VAO);
-
-	glGenBuffers(1, &m_VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(MyVertex) * 4, pvertex, GL_STATIC_DRAW);
-
+	//pindices of how we draw the triangle
 	unsigned int pindices[6];
 	//First Triangle
 	pindices[0] = 0;
@@ -205,13 +178,20 @@ void createShapes()
 	pindices[4] = 2;
 	pindices[5] = 3;
 
+	// Create and bind buffers to a vertex array object
+	glGenVertexArrays(1, &m_VAO); // VAO + Vertex Array Object
+	glBindVertexArray(m_VAO);
+
+	glGenBuffers(1, &m_VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(MyVertex) * 4, pvertex, GL_STATIC_DRAW);
+
 	glGenBuffers(1, &m_IBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * 6, pindices, GL_STATIC_DRAW);
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(MyVertex), BUFFER_OFFSET(0));
 	glEnableVertexAttribArray(0);
-	glBindVertexArray(0);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
 	glBindVertexArray(0);
@@ -266,7 +246,7 @@ void createOpenGLBuffer(std::vector<tinyobj::shape_t> &shapes)
 	}
 }
 
-void DrawSquare()
+void DrawBoth()
 {
 	glUseProgram(m_shader);
 	int view_proj_uniform = glGetUniformLocation(m_shader, "ProjectionView");
@@ -278,16 +258,6 @@ void DrawSquare()
 	glBindVertexArray(m_VAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(0));
 	glBindVertexArray(0);
-}
-
-void DrawOBJ()
-{
-	glUseProgram(m_shader);
-	int view_proj_uniform = glGetUniformLocation(m_shader, "ProjectionView");
-	int modelID = glGetUniformLocation(m_shader, "Model");
-
-	glUniformMatrix4fv(view_proj_uniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
-	glUniformMatrix4fv(modelID, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
 	for (unsigned int i = 0; i < m_gl_info.size(); ++i)
 	{
@@ -298,6 +268,12 @@ void DrawOBJ()
 
 int main()
 {
+
+	// Create window and camera
+	m_view = glm::lookAt(vec3(0, 0, 50), vec3(0), vec3(0, 1, 0));
+	m_projection = glm::perspective(glm::pi<float>()*0.25f, 16 / 9.f, 0.1f, 1000.f); // Don't know the first one, 16 by 9 is the ratio, 0.1f inner, 1000f is outer.
+	m_projectionViewMatrix = m_projection * m_view;
+
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector <tinyobj::material_t> materials;
 	std::string err;
@@ -330,9 +306,14 @@ int main()
 			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0, -1));
 		if (glfwGetKey(window, GLFW_KEY_E))
 			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0, 1));
+		if (glfwGetKey(window, GLFW_KEY_Z))
+			modelMatrix *= glm::rotate(0.05f, glm::vec3(0, 0, -1));
+		if (glfwGetKey(window, GLFW_KEY_X))
+			modelMatrix *= glm::rotate(0.05f, glm::vec3(0, 0, 1));
 
-		DrawOBJ();
-		DrawSquare();
+		DrawBoth();
+		//DrawOBJ();
+		//DrawSquare();
 		
 		glfwSwapBuffers(window);
 		glfwPollEvents();
