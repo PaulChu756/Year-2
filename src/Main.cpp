@@ -102,6 +102,7 @@ std::string readShader(std::string rs)
 
 void Shader()
 {
+	// Read in from text file
 	std::string readVS = readShader("vertexshader.txt");
 	std::string readFS = readShader("fragmentshader.txt");
 
@@ -122,6 +123,7 @@ void Shader()
 	m_shader = glCreateProgram();
 	glAttachShader(m_shader, vertexShader);
 	glAttachShader(m_shader, fragmentShader);
+	// m_shader goes into the text file and grabs Position and Colour.
 	glBindAttribLocation(0, m_shader, "Position");
 	glBindAttribLocation(1, m_shader, "Colour");
 	glLinkProgram(m_shader);
@@ -178,22 +180,25 @@ void createShapes()
 	pindices[4] = 2;
 	pindices[5] = 3;
 
-	// Create and bind buffers to a vertex array object
-	glGenVertexArrays(1, &m_VAO); // VAO + Vertex Array Object
+	// To talk/communcation to the graphics card, you first generate the vertex buffer
+	// Then you bind the vertex buffer to the reference of the object you want.
+	// After that, then you populate the data/fill in the buffer that you created with information
+
+	// Vertex Array Object
+	glGenVertexArrays(1, &m_VAO); 
 	glBindVertexArray(m_VAO);
 
-	glGenBuffers(1, &m_VBO);
+	// Vertex buffer object
+	glGenBuffers(1, &m_VBO); 
 	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(MyVertex) * 4, pvertex, GL_STATIC_DRAW);
 
-	glGenBuffers(1, &m_IBO);
+	// Index buffer object
+	glGenBuffers(1, &m_IBO); 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * 6, pindices, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(MyVertex), BUFFER_OFFSET(0));
-	glEnableVertexAttribArray(0);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
+	// Setting all these bind buffers to 0 means they are reseted. 
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -246,8 +251,10 @@ void createOpenGLBuffer(std::vector<tinyobj::shape_t> &shapes)
 	}
 }
 
-void DrawBoth()
+void DrawSquare()
 {
+	// Use shader
+	// view_proj_uniform and modelID get the ProjectionView and Model fom text file
 	glUseProgram(m_shader);
 	int view_proj_uniform = glGetUniformLocation(m_shader, "ProjectionView");
 	int modelID = glGetUniformLocation(m_shader, "Model");
@@ -258,6 +265,16 @@ void DrawBoth()
 	glBindVertexArray(m_VAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(0));
 	glBindVertexArray(0);
+}
+
+void DrawOBJ()
+{
+	glUseProgram(m_shader);
+	int view_proj_uniform = glGetUniformLocation(m_shader, "ProjectionView");
+	int modelID = glGetUniformLocation(m_shader, "Model");
+
+	glUniformMatrix4fv(view_proj_uniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
+	glUniformMatrix4fv(modelID, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
 	for (unsigned int i = 0; i < m_gl_info.size(); ++i)
 	{
@@ -278,15 +295,15 @@ int main()
 	std::vector <tinyobj::material_t> materials;
 	std::string err;
 
-	tinyobj::LoadObj(shapes, materials, err, "./model/dragon.obj");
-	//tinyobj::LoadObj(shapes, materials, err, "./model/bunny.obj");
+	//tinyobj::LoadObj(shapes, materials, err, "./model/dragon.obj");
+	tinyobj::LoadObj(shapes, materials, err, "./model/bunny.obj");
 	//tinyobj::LoadObj(shapes, materials, err, "./model/buddha.obj");
 
 	Window();
 	Shader();
 
 	createOpenGLBuffer(shapes); // For Models
-	createShapes();
+	createShapes(); // For Sqaure
 
 	while (glfwWindowShouldClose(window) == false && glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS)
 	{
@@ -311,9 +328,8 @@ int main()
 		if (glfwGetKey(window, GLFW_KEY_X))
 			modelMatrix *= glm::rotate(0.05f, glm::vec3(0, 0, 1));
 
-		DrawBoth();
-		//DrawOBJ();
-		//DrawSquare();
+		DrawOBJ();
+		DrawSquare();
 		
 		glfwSwapBuffers(window);
 		glfwPollEvents();
