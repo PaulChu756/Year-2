@@ -31,10 +31,6 @@ mat4 modelMatrix;
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
-//int dims = 64;
-//float *perlin_data = new float[64 * 64];
-//float scale = (1.0f / dims) * 3;
-
 struct OpenGLInfo
 {
 	unsigned int m_VAO;
@@ -45,11 +41,12 @@ struct OpenGLInfo
 
 std::vector<OpenGLInfo> m_gl_info;
 
-struct MyVertex
-{
-	float x, y, z;		//Vertex
-	float nx, ny, nz;	//Normal
-};
+// For Triangles only
+//struct MyVertex
+//{
+//	float x, y, z;		//Vertex
+//	float nx, ny, nz;	//Normal
+//};
 
 struct Vertex 
 {
@@ -118,19 +115,26 @@ void Shader()
 	// Read in from text file
 	std::string readVS = readShader("vertexshader.txt");
 	std::string readFS = readShader("fragmentshader.txt");
+	std::string readT = readShader("texcoord.txt");
+	std::string readFT = readShader("fragtexcoord.txt");
 
 	const char* vsSource = readVS.c_str();
 	const char* fsSource = readFS.c_str();
+	const char* tSource = readT.c_str();
+	const char* ftSource = readFT.c_str();
+
 
 	unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
 	//Vertex Shader
 	glShaderSource(vertexShader, 1, (const char**)&vsSource, 0);
+	glShaderSource(vertexShader, 1, (const char**)&tSource, 0);
 	glCompileShader(vertexShader);
 
 	//Fragment Shader
 	glShaderSource(fragmentShader, 1, (const char**)&fsSource, 0);
+	glShaderSource(fragmentShader, 1, (const char**)&ftSource, 0);
 	glCompileShader(fragmentShader);
 
 	m_shader = glCreateProgram();
@@ -193,88 +197,88 @@ void generateGrid(unsigned int rows, unsigned int cols)
 	}
 
 	glGenBuffers(1, &m_VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-	glBufferData(GL_ARRAY_BUFFER, (rows * cols) * sizeof(MyVertex), aoVertices, GL_STATIC_DRAW);
-
 	glGenBuffers(1, &m_IBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexCount * sizeof(unsigned int), auiIndices, GL_STATIC_DRAW);
-
 	glGenVertexArrays(1, &m_VAO);
+
 	glBindVertexArray(m_VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
+
+	glBufferData(GL_ARRAY_BUFFER, (rows * cols) * sizeof(Vertex), aoVertices, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexCount * sizeof(unsigned int), auiIndices, GL_STATIC_DRAW);
 
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(MyVertex), 0);
-	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(MyVertex), (void*)(sizeof(vec4)));
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(vec4)));
 
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
+	
 	delete[] aoVertices;
 	delete[] auiIndices;
 }
 
-void createTriangles()
-{
-	// These are the points to make the shape of the triangle, but can be used to make something else like a sqaure
-	MyVertex pvertex[4];
-	//Vertex 0 
-	pvertex[0].x = 0.0;
-	pvertex[0].y = 0.0;
-	pvertex[0].z = 0.0;
-
-	//Vertex 1
-	pvertex[1].x = 0.0;
-	pvertex[1].y = 3.0;
-	pvertex[1].z = 0.0;
-
-	//Vertex 2
-	pvertex[2].x = 3.0;
-	pvertex[2].y = 3.0;
-	pvertex[2].z = 0.0;
-
-	//Vertex 3
-	pvertex[3].x = 3.0;
-	pvertex[3].y = 0.0;
-	pvertex[3].z = 0.0;
-
-	//pindices of how we draw the triangle
-	unsigned int pindices[6];
-	//First Triangle
-	pindices[0] = 0;
-	pindices[1] = 1;
-	pindices[2] = 2;
-
-	//Second Triangle
-	pindices[3] = 0;
-	pindices[4] = 2;
-	pindices[5] = 3;
-
-	// To talk/communcation to the graphics card, you first generate the vertex buffer
-	// Then you bind the vertex buffer to the reference of the object you want.
-	// After that, then you populate the data/fill in the buffer that you created with information
-
-	// Vertex Array Object
-	glGenVertexArrays(1, &m_VAO); 
-	glBindVertexArray(m_VAO);
-
-	// Vertex buffer object
-	glGenBuffers(1, &m_VBO); 
-	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(MyVertex) * 4, pvertex, GL_STATIC_DRAW);
-
-	// Index buffer object
-	glGenBuffers(1, &m_IBO); 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * 6, pindices, GL_STATIC_DRAW);
-
-	// Setting all these bind buffers to 0 means they are reseted. 
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-}
+//void createTriangles()
+//{
+//	// These are the points to make the shape of the triangle, but can be used to make something else like a sqaure
+//	MyVertex pvertex[4];
+//	//Vertex 0 
+//	pvertex[0].x = 0.0;
+//	pvertex[0].y = 0.0;
+//	pvertex[0].z = 0.0;
+//
+//	//Vertex 1
+//	pvertex[1].x = 0.0;
+//	pvertex[1].y = 3.0;
+//	pvertex[1].z = 0.0;
+//
+//	//Vertex 2
+//	pvertex[2].x = 3.0;
+//	pvertex[2].y = 3.0;
+//	pvertex[2].z = 0.0;
+//
+//	//Vertex 3
+//	pvertex[3].x = 3.0;
+//	pvertex[3].y = 0.0;
+//	pvertex[3].z = 0.0;
+//
+//	//pindices of how we draw the triangle
+//	unsigned int pindices[6];
+//	//First Triangle
+//	pindices[0] = 0;
+//	pindices[1] = 1;
+//	pindices[2] = 2;
+//
+//	//Second Triangle
+//	pindices[3] = 0;
+//	pindices[4] = 2;
+//	pindices[5] = 3;
+//
+//	// To talk/communcation to the graphics card, you first generate the vertex buffer
+//	// Then you bind the vertex buffer to the reference of the object you want.
+//	// After that, then you populate the data/fill in the buffer that you created with information
+//
+//	// Vertex Array Object
+//	glGenVertexArrays(1, &m_VAO); 
+//	glBindVertexArray(m_VAO);
+//
+//	// Vertex buffer object
+//	glGenBuffers(1, &m_VBO); 
+//	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+//	glBufferData(GL_ARRAY_BUFFER, sizeof(MyVertex) * 4, pvertex, GL_STATIC_DRAW);
+//
+//	// Index buffer object
+//	glGenBuffers(1, &m_IBO); 
+//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
+//	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * 6, pindices, GL_STATIC_DRAW);
+//
+//	// Setting all these bind buffers to 0 means they are reseted. 
+//	glBindVertexArray(0);
+//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+//	glBindBuffer(GL_ARRAY_BUFFER, 0);
+//}
 
 void createOpenGLBuffer(std::vector<tinyobj::shape_t> &shapes)
 {
@@ -337,7 +341,6 @@ void DrawSquare()
 	glBindVertexArray(m_VAO);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
-	//glBindVertexArray(0);
 }
 
 void DrawOBJ()
@@ -356,36 +359,37 @@ void DrawOBJ()
 	}
 }
 
-//void createPlane()
-//{
-//	for (int x = 0; x < 64; ++x)
-//	{
-//		for (int y = 0; y < 64; ++y)
-//		{
-//			// generate noise here
-//			perlin_data[y* dims + x] = glm::perlin(vec2(x, y) * scale) * 0.5f + 0.5f;
-//		}
-//	}
-//}
-//
-//void GenPlane()
-//{
-//	glGenTextures(1, &m_perlin_texture);
-//	glBindTexture(GL_TEXTURE_2D, m_perlin_texture);
-//
-//	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, 64, 64, 0, GL_RED, GL_FLOAT, perlin_data);
-//
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-//}
+void PRNG()
+{
+	int dims = 64;
+	float *perlin_data = new float[dims * dims];
+	float scale = (1.0f / dims) * 3;
+
+	for (int x = 0; x < 64; ++x)
+	{
+		for (int y = 0; y < 64; ++y)
+		{
+			// generate noise here
+			perlin_data[y* dims + x] = glm::perlin(vec2(x, y) * scale) * 0.5f + 0.5f;
+		}
+	}
+
+	glGenTextures(1, &m_perlin_texture);
+	glBindTexture(GL_TEXTURE_2D, m_perlin_texture);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, 64, 64, 0, GL_RED, GL_FLOAT, perlin_data);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+}
 
 int main()
 {
 	// Create window and camera
-	m_view = glm::lookAt(vec3(0, 0, 50), vec3(0), vec3(0, 1, 0));
+	m_view = glm::lookAt(vec3(10, 10, 64), vec3(0), vec3(0, 1, 0));
 	m_projection = glm::perspective(glm::pi<float>()*0.25f, 16 / 9.f, 0.1f, 1000.f); // Don't know the first one, 16 by 9 is the ratio, 0.1f inner, 1000f is outer.
 	m_projectionViewMatrix = m_projection * m_view;
 
@@ -400,7 +404,7 @@ int main()
 	Window();
 	Shader();
 
-	generateGrid(5, 5);
+	generateGrid(64, 64);
 	//createOpenGLBuffer(shapes); // For Models
 	//createTriangles(); // For Triangles
 
@@ -411,6 +415,7 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		DrawSquare();
+		//DrawOBJ();
 
 		/*if (glfwGetKey(window, GLFW_KEY_A))
 			modelMatrix = glm::translate(modelMatrix, glm::vec3(-1, 0, 0));
@@ -429,13 +434,9 @@ int main()
 		if (glfwGetKey(window, GLFW_KEY_X))
 			modelMatrix *= glm::rotate(0.05f, glm::vec3(0, 0, 1));*/
 
-		
-		//DrawOBJ();
-		
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-
 	glfwDestroyWindow(window);
 	glfwTerminate();
 	return 0;

@@ -4,4 +4,4 @@ layout(location=1) in vec4 Colour;
 out vec4 vColour;
 uniform mat4 ProjectionView;
 uniform mat4 Model;
-void main() { vColour = Colour; gl_Position = ProjectionView * Model * Position;}
+void main() { vColour = Colour; gl_Position = ProjectionView * Model * Position; }
