@@ -10,6 +10,7 @@
 #include <fstream>
 #include <string>
 
+using glm::vec2;
 using glm::vec3;
 using glm::vec4;
 using glm::mat4;
@@ -18,6 +19,8 @@ unsigned int m_VAO; // Vertex Array Object
 unsigned int m_VBO; //Vertex Buffer Object
 unsigned int m_IBO; //Index Buffer Object
 unsigned int m_shader;
+unsigned int m_perlin_texture;
+unsigned int indexCount;
 
 GLFWwindow *window;
 
@@ -27,6 +30,10 @@ mat4 m_projectionViewMatrix;
 mat4 modelMatrix;
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
+
+//int dims = 64;
+//float *perlin_data = new float[64 * 64];
+//float scale = (1.0f / dims) * 3;
 
 struct OpenGLInfo
 {
@@ -42,6 +49,12 @@ struct MyVertex
 {
 	float x, y, z;		//Vertex
 	float nx, ny, nz;	//Normal
+};
+
+struct Vertex 
+{
+	vec4 position;
+	vec4 colour;
 };
 
 int Window()
@@ -144,7 +157,66 @@ void Shader()
 	}
 }
 
-void createShapes()
+// Creating grid
+void generateGrid(unsigned int rows, unsigned int cols)
+{
+	indexCount = (rows - 1) * (cols - 1) * 6;
+	Vertex* aoVertices = new Vertex[rows * cols];
+	for (unsigned int r = 0; r < rows; ++r)
+	{
+		for (unsigned int c = 0; c < cols; ++c)
+		{
+			// create some arbitrary colour based off something // What?
+			// that might not be related to tiling a texture // Hmmm What?
+			aoVertices[r * cols + c].position = vec4((float)c, 0, (float)r, 1);
+			vec3 colour = vec3(sinf((c / (float)(cols - 1)) * (r / (float)(rows - 1))));
+			aoVertices[r * cols + c].colour = vec4(colour, 1);
+		}
+	}
+
+	unsigned int* auiIndices = new unsigned int[indexCount];
+	unsigned int index = 0;
+	for (unsigned int r = 0; r < (rows - 1); ++r)
+	{
+		for (unsigned int c = 0; c < (cols - 1); ++c)
+		{
+			//Triangle 1
+			auiIndices[index++] = r * cols + c;
+			auiIndices[index++] = (r + 1) * cols + c;
+			auiIndices[index++] = (r + 1) * cols + (c + 1);
+
+			// Triangle 2
+			auiIndices[index++] = r * cols + c;
+			auiIndices[index++] = (r + 1) * cols + (c + 1);
+			auiIndices[index++] = r * cols + (c + 1);
+		}
+	}
+
+	glGenBuffers(1, &m_VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+	glBufferData(GL_ARRAY_BUFFER, (rows * cols) * sizeof(MyVertex), aoVertices, GL_STATIC_DRAW);
+
+	glGenBuffers(1, &m_IBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexCount * sizeof(unsigned int), auiIndices, GL_STATIC_DRAW);
+
+	glGenVertexArrays(1, &m_VAO);
+	glBindVertexArray(m_VAO);
+
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(MyVertex), 0);
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(MyVertex), (void*)(sizeof(vec4)));
+
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	delete[] aoVertices;
+	delete[] auiIndices;
+}
+
+void createTriangles()
 {
 	// These are the points to make the shape of the triangle, but can be used to make something else like a sqaure
 	MyVertex pvertex[4];
@@ -256,24 +328,25 @@ void DrawSquare()
 	// Use shader
 	// view_proj_uniform and modelID get the ProjectionView and Model fom text file
 	glUseProgram(m_shader);
-	int view_proj_uniform = glGetUniformLocation(m_shader, "ProjectionView");
-	int modelID = glGetUniformLocation(m_shader, "Model");
+	unsigned int projectionViewUniform = glGetUniformLocation(m_shader, "ProjectionView");
+	unsigned int modelID = glGetUniformLocation(m_shader, "Model");
 
-	glUniformMatrix4fv(view_proj_uniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
+	glUniformMatrix4fv(projectionViewUniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
 	glUniformMatrix4fv(modelID, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
 	glBindVertexArray(m_VAO);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(0));
-	glBindVertexArray(0);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+	//glBindVertexArray(0);
 }
 
 void DrawOBJ()
 {
 	glUseProgram(m_shader);
-	int view_proj_uniform = glGetUniformLocation(m_shader, "ProjectionView");
+	int projectionViewUniform = glGetUniformLocation(m_shader, "ProjectionView");
 	int modelID = glGetUniformLocation(m_shader, "Model");
 
-	glUniformMatrix4fv(view_proj_uniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
+	glUniformMatrix4fv(projectionViewUniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
 	glUniformMatrix4fv(modelID, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
 	for (unsigned int i = 0; i < m_gl_info.size(); ++i)
@@ -283,9 +356,34 @@ void DrawOBJ()
 	}
 }
 
+//void createPlane()
+//{
+//	for (int x = 0; x < 64; ++x)
+//	{
+//		for (int y = 0; y < 64; ++y)
+//		{
+//			// generate noise here
+//			perlin_data[y* dims + x] = glm::perlin(vec2(x, y) * scale) * 0.5f + 0.5f;
+//		}
+//	}
+//}
+//
+//void GenPlane()
+//{
+//	glGenTextures(1, &m_perlin_texture);
+//	glBindTexture(GL_TEXTURE_2D, m_perlin_texture);
+//
+//	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, 64, 64, 0, GL_RED, GL_FLOAT, perlin_data);
+//
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+//}
+
 int main()
 {
-
 	// Create window and camera
 	m_view = glm::lookAt(vec3(0, 0, 50), vec3(0), vec3(0, 1, 0));
 	m_projection = glm::perspective(glm::pi<float>()*0.25f, 16 / 9.f, 0.1f, 1000.f); // Don't know the first one, 16 by 9 is the ratio, 0.1f inner, 1000f is outer.
@@ -296,14 +394,15 @@ int main()
 	std::string err;
 
 	//tinyobj::LoadObj(shapes, materials, err, "./model/dragon.obj");
-	tinyobj::LoadObj(shapes, materials, err, "./model/bunny.obj");
+	//tinyobj::LoadObj(shapes, materials, err, "./model/bunny.obj");
 	//tinyobj::LoadObj(shapes, materials, err, "./model/buddha.obj");
 
 	Window();
 	Shader();
 
-	createOpenGLBuffer(shapes); // For Models
-	createShapes(); // For Sqaure
+	generateGrid(5, 5);
+	//createOpenGLBuffer(shapes); // For Models
+	//createTriangles(); // For Triangles
 
 	while (glfwWindowShouldClose(window) == false && glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS)
 	{
@@ -311,7 +410,9 @@ int main()
 		glEnable(GL_DEPTH_TEST);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		if (glfwGetKey(window, GLFW_KEY_A))
+		DrawSquare();
+
+		/*if (glfwGetKey(window, GLFW_KEY_A))
 			modelMatrix = glm::translate(modelMatrix, glm::vec3(-1, 0, 0));
 		if (glfwGetKey(window, GLFW_KEY_D))
 			modelMatrix = glm::translate(modelMatrix, glm::vec3(1, 0, 0));
@@ -326,50 +427,16 @@ int main()
 		if (glfwGetKey(window, GLFW_KEY_Z))
 			modelMatrix *= glm::rotate(0.05f, glm::vec3(0, 0, -1));
 		if (glfwGetKey(window, GLFW_KEY_X))
-			modelMatrix *= glm::rotate(0.05f, glm::vec3(0, 0, 1));
+			modelMatrix *= glm::rotate(0.05f, glm::vec3(0, 0, 1));*/
 
-		DrawOBJ();
-		DrawSquare();
+		
+		//DrawOBJ();
 		
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
+
 	glfwDestroyWindow(window);
 	glfwTerminate();
 	return 0;
 }
-
-// Creating grid
-//void generateGrid(unsigned int rows, unsigned int cols)
-//{
-//	//Vertex* aoVertices = new Vertex[rows * cols];
-//	//for (unsigned int r = 0; r < rows; ++r)
-//	//{
-//	//	for (unsigned int c = 0; c < cols; ++c)
-//	//	{
-//	//		aoVertices[r * cols + c].position = vec4((float)c, 0, (float)r, 1);
-//	//		// create some arbitrary colour based off something // What?
-//	//		// that might not be related to tiling a texture // Hmmm What?
-//	//		vec3 colour = vec3(sinf((c / (float)(cols - 1)) * (r / (float)(rows - 1))));
-//	//		aoVertices[r * cols + c].colour = vec4(colour, 1);
-//	//	}
-//	//}
-//
-//	//unsigned int* auiIndices = new unsigned int[(rows - 1) * (cols - 1) * 6];
-//	//unsigned int index = 0;
-//	//for (unsigned int r = 0; r < (rows - 1); ++r)
-//	//{
-//	//	for (unsigned int c = 0; c < (cols - 1); ++c)
-//	//	{
-//	//		//Triangle 1
-//	//		auiIndices[index++] = r * cols + c;
-//	//		auiIndices[index++] = (r + 1) * cols + c;
-//	//		auiIndices[index++] = (r + 1) * cols + (c + 1);
-//
-//	//		// Triangle 2
-//	//		auiIndices[index++] = r * cols + c;
-//	//		auiIndices[index++] = (r + 1) * cols + (c + 1);
-//	//		auiIndices[index++] = r * cols + (c + 1);
-//	//	}
-//	//}
-//}
