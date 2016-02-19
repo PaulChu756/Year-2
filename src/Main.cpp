@@ -41,15 +41,10 @@ struct OpenGLInfo
 
 std::vector<OpenGLInfo> m_gl_info;
 
-// For Triangles only
-//struct MyVertex
-//{
-//	float x, y, z;		//Vertex
-//	float nx, ny, nz;	//Normal
-//};
-
 struct Vertex 
 {
+	//	float x, y, z;		//Vertex
+	//	float nx, ny, nz;	//Normal
 	vec4 position;
 	vec4 colour;
 };
@@ -115,34 +110,28 @@ void Shader()
 	// Read in from text file
 	std::string readVS = readShader("vertexshader.txt");
 	std::string readFS = readShader("fragmentshader.txt");
-	std::string readT = readShader("texcoord.txt");
-	std::string readFT = readShader("fragtexcoord.txt");
 
 	const char* vsSource = readVS.c_str();
 	const char* fsSource = readFS.c_str();
-	const char* tSource = readT.c_str();
-	const char* ftSource = readFT.c_str();
-
 
 	unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
 	//Vertex Shader
 	glShaderSource(vertexShader, 1, (const char**)&vsSource, 0);
-	glShaderSource(vertexShader, 1, (const char**)&tSource, 0);
 	glCompileShader(vertexShader);
 
 	//Fragment Shader
 	glShaderSource(fragmentShader, 1, (const char**)&fsSource, 0);
-	glShaderSource(fragmentShader, 1, (const char**)&ftSource, 0);
 	glCompileShader(fragmentShader);
 
 	m_shader = glCreateProgram();
 	glAttachShader(m_shader, vertexShader);
 	glAttachShader(m_shader, fragmentShader);
-	// m_shader goes into the text file and grabs Position and Colour.
+	// m_shader goes into the text file and grabs Position, Colour and texcoord.
 	glBindAttribLocation(0, m_shader, "Position");
 	glBindAttribLocation(1, m_shader, "Colour");
+	glBindAttribLocation(2, m_shader, "texcoord");
 	glLinkProgram(m_shader);
 	
 	//Check if shader works (don't really need it)
@@ -159,9 +148,11 @@ void Shader()
 		printf("%s\n", infoLog);
 		delete[] infoLog;
 	}
+	glDeleteShader(fragmentShader);
+	glDeleteShader(vertexShader);
 }
 
-// Creating grid
+// Stuff has changed.
 void generateGrid(unsigned int rows, unsigned int cols)
 {
 	indexCount = (rows - 1) * (cols - 1) * 6;
@@ -170,8 +161,6 @@ void generateGrid(unsigned int rows, unsigned int cols)
 	{
 		for (unsigned int c = 0; c < cols; ++c)
 		{
-			// create some arbitrary colour based off something // What?
-			// that might not be related to tiling a texture // Hmmm What?
 			aoVertices[r * cols + c].position = vec4((float)c, 0, (float)r, 1);
 			vec3 colour = vec3(sinf((c / (float)(cols - 1)) * (r / (float)(rows - 1))));
 			aoVertices[r * cols + c].colour = vec4(colour, 1);
@@ -196,10 +185,12 @@ void generateGrid(unsigned int rows, unsigned int cols)
 		}
 	}
 
+	// Create Buffers
 	glGenBuffers(1, &m_VBO);
 	glGenBuffers(1, &m_IBO);
 	glGenVertexArrays(1, &m_VAO);
 
+	// Bind it
 	glBindVertexArray(m_VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
@@ -220,6 +211,45 @@ void generateGrid(unsigned int rows, unsigned int cols)
 	delete[] auiIndices;
 }
 
+//Stuff has changed.
+void PRNG(unsigned int rows, unsigned int cols)
+{
+	float *perlin_data = new float[rows * cols];
+	float scale = (1.0f / *perlin_data) * 3;
+	int octaves = 6;
+
+	for (int x = 0; x < 64; ++x)
+	{
+		for (int y = 0; y < 64; ++y)
+		{
+			// generate noise here
+			float amplitude = 1.0f;
+			float persistence = 0.3f;
+			perlin_data[y * rows + x] = 0;
+
+			for (int o = 0; o < octaves; ++o)
+			{
+				float freq = powf(2, (float)o);
+				float perlin_sample = glm::perlin(vec2((float)x, (float)y) * scale * freq) * 0.5f + 0.5f;
+				perlin_data[y * rows + x] += perlin_sample * amplitude;
+				amplitude *= persistence;
+			}
+		}
+	}
+
+	glGenTextures(1, &m_perlin_texture);
+	glBindTexture(GL_TEXTURE_2D, m_perlin_texture);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, 64, 64, 0, GL_RED, GL_FLOAT, perlin_data);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+}
+
+// Comment out createTriangles because I don't need it anymore, for now.
 //void createTriangles()
 //{
 //	// These are the points to make the shape of the triangle, but can be used to make something else like a sqaure
@@ -280,6 +310,7 @@ void generateGrid(unsigned int rows, unsigned int cols)
 //	glBindBuffer(GL_ARRAY_BUFFER, 0);
 //}
 
+// This is good, don't touch it
 void createOpenGLBuffer(std::vector<tinyobj::shape_t> &shapes)
 {
 	m_gl_info.resize(shapes.size());
@@ -327,22 +358,27 @@ void createOpenGLBuffer(std::vector<tinyobj::shape_t> &shapes)
 	}
 }
 
+// Stuff has changed.
 void DrawSquare()
 {
 	// Use shader
 	// view_proj_uniform and modelID get the ProjectionView and Model fom text file
 	glUseProgram(m_shader);
+	glActiveTexture(GL_TEXTURE0);
 	unsigned int projectionViewUniform = glGetUniformLocation(m_shader, "ProjectionView");
 	unsigned int modelID = glGetUniformLocation(m_shader, "Model");
+	unsigned int texture = glGetUniformLocation(m_shader, "perlin_texture");
 
 	glUniformMatrix4fv(projectionViewUniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
 	glUniformMatrix4fv(modelID, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+	glUniform1i(texture, 0);
 
 	glBindVertexArray(m_VAO);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
 }
 
+// This is good, don't touch it
 void DrawOBJ()
 {
 	glUseProgram(m_shader);
@@ -359,37 +395,11 @@ void DrawOBJ()
 	}
 }
 
-void PRNG()
-{
-	int dims = 64;
-	float *perlin_data = new float[dims * dims];
-	float scale = (1.0f / dims) * 3;
-
-	for (int x = 0; x < 64; ++x)
-	{
-		for (int y = 0; y < 64; ++y)
-		{
-			// generate noise here
-			perlin_data[y* dims + x] = glm::perlin(vec2(x, y) * scale) * 0.5f + 0.5f;
-		}
-	}
-
-	glGenTextures(1, &m_perlin_texture);
-	glBindTexture(GL_TEXTURE_2D, m_perlin_texture);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, 64, 64, 0, GL_RED, GL_FLOAT, perlin_data);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-}
-
+// Stuff has changed.
 int main()
 {
 	// Create window and camera
-	m_view = glm::lookAt(vec3(10, 10, 64), vec3(0), vec3(0, 1, 0));
+	m_view = glm::lookAt(vec3(10, 10, 50), vec3(0), vec3(0, 1, 0));
 	m_projection = glm::perspective(glm::pi<float>()*0.25f, 16 / 9.f, 0.1f, 1000.f); // Don't know the first one, 16 by 9 is the ratio, 0.1f inner, 1000f is outer.
 	m_projectionViewMatrix = m_projection * m_view;
 
