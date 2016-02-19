@@ -46,6 +46,7 @@ struct Vertex
 {
 	vec4 position;
 	vec4 colour;
+	vec2 texcoord;
 };
 
 int Window()
@@ -75,6 +76,11 @@ int Window()
 	auto major = ogl_GetMajorVersion();
 	auto minor = ogl_GetMinorVersion();
 	printf_s("GL: %i.%i\n", major, minor);
+
+	// Create window and camera
+	m_view = glm::lookAt(vec3(50, 20, 100), vec3(0), vec3(0, 1, 0));
+	m_projection = glm::perspective(glm::pi<float>()*0.25f, 16 / 9.f, 0.1f, 1000.f); // Don't know the first one, 16 by 9 is the ratio, 0.1f inner, 1000f is outer.
+	m_projectionViewMatrix = m_projection * m_view;
 
 	return 0;
 }
@@ -106,10 +112,12 @@ void Shader()
 {
 	// Read in from text file
 	std::string readVS = readShader("vertexshader.txt");
-	std::string readFS = readShader("fragmentshader.txt");
+	//std::string readFS = readShader("fragmentshader.txt");
+	std::string readTFS = readShader("fragmentTextureShader.txt");
 	
 	const char* vsSource = readVS.c_str();
-	const char* fsSource = readFS.c_str();
+	//const char* fsSource = readFS.c_str();
+	const char* fsSource = readTFS.c_str();
 	
 	unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -214,6 +222,7 @@ void generateGrid(unsigned int rows, unsigned int cols)
 	// Create Buffers
 	glGenVertexArrays(1, &m_VAO);
 	glBindVertexArray(m_VAO);
+
 	glGenBuffers(1, &m_VBO);
 	glGenBuffers(1, &m_IBO);
 	glGenTextures(1, &m_perlin_texture);
@@ -232,6 +241,7 @@ void generateGrid(unsigned int rows, unsigned int cols)
 
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(vec4)));
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(float) * 2));
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -241,10 +251,11 @@ void generateGrid(unsigned int rows, unsigned int cols)
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	//glBindTexture(GL_TEXTURE_2D, 0);
 	
 	delete[] aoVertices;
 	delete[] auiIndices;
+	delete[] perlin_data;
 }
 
 // Stuff has changed.
@@ -275,11 +286,6 @@ void DrawSquare()
 // Stuff has changed.
 int main()
 {
-	// Create window and camera
-	m_view = glm::lookAt(vec3(10, 10, 50), vec3(0), vec3(0, 1, 0));
-	m_projection = glm::perspective(glm::pi<float>()*0.25f, 16 / 9.f, 0.1f, 1000.f); // Don't know the first one, 16 by 9 is the ratio, 0.1f inner, 1000f is outer.
-	m_projectionViewMatrix = m_projection * m_view;
-
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector <tinyobj::material_t> materials;
 	std::string err;
@@ -307,6 +313,7 @@ int main()
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
+
 	glfwDestroyWindow(window);
 	glfwTerminate();
 	return 0;

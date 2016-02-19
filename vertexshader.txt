@@ -6,11 +6,10 @@ layout(location=2) in vec2 texcoord;
 
 uniform mat4 ProjectionView;
 uniform mat4 Model;
+uniform sampler2D perlin_texture;
 
 out vec4 vColour;
 out vec2 frag_texcoord;
-
-uniform sampler2D perlin_texture;
 
 void main() 
 { 
