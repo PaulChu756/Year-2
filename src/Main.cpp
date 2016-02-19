@@ -21,6 +21,7 @@ unsigned int m_IBO; //Index Buffer Object
 unsigned int m_shader;
 unsigned int m_perlin_texture;
 unsigned int indexCount;
+float *perlin_data;
 
 GLFWwindow *window;
 
@@ -43,8 +44,6 @@ std::vector<OpenGLInfo> m_gl_info;
 
 struct Vertex 
 {
-	//	float x, y, z;		//Vertex
-	//	float nx, ny, nz;	//Normal
 	vec4 position;
 	vec4 colour;
 };
@@ -99,9 +98,7 @@ std::string readShader(std::string rs)
 		std::cout << allTheLines;
 		file.close();
 	}
-
 	else std::cout << "Unable to open file";
-
 	return allTheLines;
 }
 
@@ -110,10 +107,10 @@ void Shader()
 	// Read in from text file
 	std::string readVS = readShader("vertexshader.txt");
 	std::string readFS = readShader("fragmentshader.txt");
-
+	
 	const char* vsSource = readVS.c_str();
 	const char* fsSource = readFS.c_str();
-
+	
 	unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
@@ -152,6 +149,33 @@ void Shader()
 	glDeleteShader(vertexShader);
 }
 
+// Just Math, nothing really to change
+void PRNG(unsigned int rows, unsigned int cols)
+{
+	perlin_data = new float[rows * cols];
+	float scale = (1.0f / *perlin_data) * 3;
+	int octaves = 6;
+
+	for (int x = 0; x < rows; ++x)
+	{
+		for (int y = 0; y < rows; ++y)
+		{
+			// generate noise here
+			float amplitude = 1.0f;
+			float persistence = 0.3f;
+			perlin_data[y * rows + x] = 0;
+
+			for (int o = 0; o < octaves; ++o)
+			{
+				float freq = powf(2, (float)o);
+				float perlin_sample = glm::perlin(vec2((float)x, (float)y) * scale * freq) * 0.5f + 0.5f;
+				perlin_data[y * rows + x] += perlin_sample * amplitude;
+				amplitude *= persistence;
+			}
+		}
+	}
+}
+
 // Stuff has changed.
 void generateGrid(unsigned int rows, unsigned int cols)
 {
@@ -185,177 +209,42 @@ void generateGrid(unsigned int rows, unsigned int cols)
 		}
 	}
 
+	PRNG(rows, cols);
+	
 	// Create Buffers
+	glGenVertexArrays(1, &m_VAO);
+	glBindVertexArray(m_VAO);
 	glGenBuffers(1, &m_VBO);
 	glGenBuffers(1, &m_IBO);
-	glGenVertexArrays(1, &m_VAO);
+	glGenTextures(1, &m_perlin_texture);
 
 	// Bind it
-	glBindVertexArray(m_VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
+	glBindTexture(GL_TEXTURE_2D, m_perlin_texture); 
 
-	glBufferData(GL_ARRAY_BUFFER, (rows * cols) * sizeof(Vertex), aoVertices, GL_STATIC_DRAW);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexCount * sizeof(unsigned int), auiIndices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, (rows * cols) * sizeof(Vertex), aoVertices, GL_STATIC_DRAW); // VBO
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexCount * sizeof(unsigned int), auiIndices, GL_STATIC_DRAW); //IBO
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, rows, cols, 0, GL_RED, GL_FLOAT, perlin_data); // Texture
 
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
+
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(vec4)));
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 	
 	delete[] aoVertices;
 	delete[] auiIndices;
-}
-
-//Stuff has changed.
-void PRNG(unsigned int rows, unsigned int cols)
-{
-	float *perlin_data = new float[rows * cols];
-	float scale = (1.0f / *perlin_data) * 3;
-	int octaves = 6;
-
-	for (int x = 0; x < 64; ++x)
-	{
-		for (int y = 0; y < 64; ++y)
-		{
-			// generate noise here
-			float amplitude = 1.0f;
-			float persistence = 0.3f;
-			perlin_data[y * rows + x] = 0;
-
-			for (int o = 0; o < octaves; ++o)
-			{
-				float freq = powf(2, (float)o);
-				float perlin_sample = glm::perlin(vec2((float)x, (float)y) * scale * freq) * 0.5f + 0.5f;
-				perlin_data[y * rows + x] += perlin_sample * amplitude;
-				amplitude *= persistence;
-			}
-		}
-	}
-
-	glGenTextures(1, &m_perlin_texture);
-	glBindTexture(GL_TEXTURE_2D, m_perlin_texture);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, 64, 64, 0, GL_RED, GL_FLOAT, perlin_data);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-}
-
-// Comment out createTriangles because I don't need it anymore, for now.
-//void createTriangles()
-//{
-//	// These are the points to make the shape of the triangle, but can be used to make something else like a sqaure
-//	MyVertex pvertex[4];
-//	//Vertex 0 
-//	pvertex[0].x = 0.0;
-//	pvertex[0].y = 0.0;
-//	pvertex[0].z = 0.0;
-//
-//	//Vertex 1
-//	pvertex[1].x = 0.0;
-//	pvertex[1].y = 3.0;
-//	pvertex[1].z = 0.0;
-//
-//	//Vertex 2
-//	pvertex[2].x = 3.0;
-//	pvertex[2].y = 3.0;
-//	pvertex[2].z = 0.0;
-//
-//	//Vertex 3
-//	pvertex[3].x = 3.0;
-//	pvertex[3].y = 0.0;
-//	pvertex[3].z = 0.0;
-//
-//	//pindices of how we draw the triangle
-//	unsigned int pindices[6];
-//	//First Triangle
-//	pindices[0] = 0;
-//	pindices[1] = 1;
-//	pindices[2] = 2;
-//
-//	//Second Triangle
-//	pindices[3] = 0;
-//	pindices[4] = 2;
-//	pindices[5] = 3;
-//
-//	// To talk/communcation to the graphics card, you first generate the vertex buffer
-//	// Then you bind the vertex buffer to the reference of the object you want.
-//	// After that, then you populate the data/fill in the buffer that you created with information
-//
-//	// Vertex Array Object
-//	glGenVertexArrays(1, &m_VAO); 
-//	glBindVertexArray(m_VAO);
-//
-//	// Vertex buffer object
-//	glGenBuffers(1, &m_VBO); 
-//	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-//	glBufferData(GL_ARRAY_BUFFER, sizeof(MyVertex) * 4, pvertex, GL_STATIC_DRAW);
-//
-//	// Index buffer object
-//	glGenBuffers(1, &m_IBO); 
-//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
-//	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * 6, pindices, GL_STATIC_DRAW);
-//
-//	// Setting all these bind buffers to 0 means they are reseted. 
-//	glBindVertexArray(0);
-//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-//	glBindBuffer(GL_ARRAY_BUFFER, 0);
-//}
-
-// This is good, don't touch it
-void createOpenGLBuffer(std::vector<tinyobj::shape_t> &shapes)
-{
-	m_gl_info.resize(shapes.size());
-	for (unsigned int mesh_index = 0; mesh_index < shapes.size(); ++mesh_index)
-	{
-		glGenVertexArrays(1, &m_gl_info[mesh_index].m_VAO);
-		glGenBuffers(1, &m_gl_info[mesh_index].m_VBO);
-		glGenBuffers(1, &m_gl_info[mesh_index].m_IBO);
-		glBindVertexArray(m_gl_info[mesh_index].m_VAO);
-
-		unsigned int float_count = shapes[mesh_index].mesh.positions.size();
-		float_count += shapes[mesh_index].mesh.normals.size();
-		float_count += shapes[mesh_index].mesh.texcoords.size();
-
-		std::vector<float> vertex_data;
-		vertex_data.reserve(float_count);
-
-		vertex_data.insert(vertex_data.end(),
-			shapes[mesh_index].mesh.positions.begin(),
-			shapes[mesh_index].mesh.positions.end());
-
-		vertex_data.insert(vertex_data.end(),
-			shapes[mesh_index].mesh.normals.begin(),
-			shapes[mesh_index].mesh.normals.end());
-
-		m_gl_info[mesh_index].m_index_count = shapes[mesh_index].mesh.indices.size();
-
-		glBindBuffer(GL_ARRAY_BUFFER, m_gl_info[mesh_index].m_VBO);
-		glBufferData(GL_ARRAY_BUFFER, vertex_data.size() * sizeof(float), vertex_data.data(), GL_STATIC_DRAW);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_gl_info[mesh_index].m_IBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-			shapes[mesh_index].mesh.indices.size() * sizeof(unsigned int),
-			shapes[mesh_index].mesh.indices.data(), GL_STATIC_DRAW);
-
-		glEnableVertexAttribArray(0); // Position
-		glEnableVertexAttribArray(1); // normal data
-
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_TRUE, 0, (void*)(sizeof(float)*shapes[mesh_index].mesh.positions.size()));
-
-		glBindVertexArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	}
 }
 
 // Stuff has changed.
@@ -365,34 +254,22 @@ void DrawSquare()
 	// view_proj_uniform and modelID get the ProjectionView and Model fom text file
 	glUseProgram(m_shader);
 	glActiveTexture(GL_TEXTURE0);
+
 	unsigned int projectionViewUniform = glGetUniformLocation(m_shader, "ProjectionView");
 	unsigned int modelID = glGetUniformLocation(m_shader, "Model");
 	unsigned int texture = glGetUniformLocation(m_shader, "perlin_texture");
-
+	
 	glUniformMatrix4fv(projectionViewUniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
 	glUniformMatrix4fv(modelID, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 	glUniform1i(texture, 0);
 
 	glBindVertexArray(m_VAO);
+	//// This glpolygonMode, if I turn it on, lines appear, if off, whatever is filled
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
-}
 
-// This is good, don't touch it
-void DrawOBJ()
-{
-	glUseProgram(m_shader);
-	int projectionViewUniform = glGetUniformLocation(m_shader, "ProjectionView");
-	int modelID = glGetUniformLocation(m_shader, "Model");
-
-	glUniformMatrix4fv(projectionViewUniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
-	glUniformMatrix4fv(modelID, 1, GL_FALSE, glm::value_ptr(modelMatrix));
-
-	for (unsigned int i = 0; i < m_gl_info.size(); ++i)
-	{
-		glBindVertexArray(m_gl_info[i].m_VAO);
-		glDrawElements(GL_TRIANGLES, m_gl_info[i].m_index_count, GL_UNSIGNED_INT, 0);
-	}
+	glBindVertexArray(0);
+	glUseProgram(0);
 }
 
 // Stuff has changed.
@@ -427,23 +304,6 @@ int main()
 		DrawSquare();
 		//DrawOBJ();
 
-		/*if (glfwGetKey(window, GLFW_KEY_A))
-			modelMatrix = glm::translate(modelMatrix, glm::vec3(-1, 0, 0));
-		if (glfwGetKey(window, GLFW_KEY_D))
-			modelMatrix = glm::translate(modelMatrix, glm::vec3(1, 0, 0));
-		if (glfwGetKey(window, GLFW_KEY_W))
-			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 1, 0));
-		if (glfwGetKey(window, GLFW_KEY_S))
-			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, -1, 0));
-		if (glfwGetKey(window, GLFW_KEY_Q))
-			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0, -1));
-		if (glfwGetKey(window, GLFW_KEY_E))
-			modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0, 1));
-		if (glfwGetKey(window, GLFW_KEY_Z))
-			modelMatrix *= glm::rotate(0.05f, glm::vec3(0, 0, -1));
-		if (glfwGetKey(window, GLFW_KEY_X))
-			modelMatrix *= glm::rotate(0.05f, glm::vec3(0, 0, 1));*/
-
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
@@ -451,3 +311,20 @@ int main()
 	glfwTerminate();
 	return 0;
 }
+
+/*if (glfwGetKey(window, GLFW_KEY_A))
+modelMatrix = glm::translate(modelMatrix, glm::vec3(-1, 0, 0));
+if (glfwGetKey(window, GLFW_KEY_D))
+modelMatrix = glm::translate(modelMatrix, glm::vec3(1, 0, 0));
+if (glfwGetKey(window, GLFW_KEY_W))
+modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 1, 0));
+if (glfwGetKey(window, GLFW_KEY_S))
+modelMatrix = glm::translate(modelMatrix, glm::vec3(0, -1, 0));
+if (glfwGetKey(window, GLFW_KEY_Q))
+modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0, -1));
+if (glfwGetKey(window, GLFW_KEY_E))
+modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0, 1));
+if (glfwGetKey(window, GLFW_KEY_Z))
+modelMatrix *= glm::rotate(0.05f, glm::vec3(0, 0, -1));
+if (glfwGetKey(window, GLFW_KEY_X))
+modelMatrix *= glm::rotate(0.05f, glm::vec3(0, 0, 1));*/
