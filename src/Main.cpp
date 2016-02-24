@@ -45,7 +45,7 @@ std::vector<OpenGLInfo> m_gl_info;
 struct Vertex 
 {
 	vec4 position;
-	vec4 colour;
+	//vec4 colour;
 	vec2 texcoord;
 };
 
@@ -135,7 +135,7 @@ void Shader()
 	glAttachShader(m_shader, fragmentShader);
 	// m_shader goes into the text file and grabs Position, Colour and texcoord.
 	glBindAttribLocation(0, m_shader, "Position");
-	glBindAttribLocation(1, m_shader, "Colour");
+	//glBindAttribLocation(1, m_shader, "Colour");
 	glBindAttribLocation(2, m_shader, "texcoord");
 	glLinkProgram(m_shader);
 	
@@ -187,74 +187,87 @@ void PRNG(unsigned int rows, unsigned int cols)
 // Stuff has changed.
 void generateGrid(unsigned int rows, unsigned int cols)
 {
-	indexCount = (rows - 1) * (cols - 1) * 6;
-	Vertex* aoVertices = new Vertex[rows * cols];
+	Vertex* vertices = new Vertex[rows * cols];
 	for (unsigned int r = 0; r < rows; ++r)
 	{
 		for (unsigned int c = 0; c < cols; ++c)
 		{
-			aoVertices[r * cols + c].position = vec4((float)c, 0, (float)r, 1);
-			vec3 colour = vec3(sinf((c / (float)(cols - 1)) * (r / (float)(rows - 1))));
-			aoVertices[r * cols + c].colour = vec4(colour, 1);
+			// Offset position so that the terrain is centered
+			vertices[r * cols + c].position = vec4(c - cols * 0.5f, 0, r - rows * 0.5f, 1);
+
+			// setting up UV's. 
+			vertices[r * cols + c].texcoord = vec2(c * (1.f / cols), r * (1.f / rows));
 		}
 	}
 
-	unsigned int* auiIndices = new unsigned int[indexCount];
+	indexCount = (rows - 1) * (cols - 1) * 6;
+	unsigned int* indices = new unsigned int[indexCount];
 	unsigned int index = 0;
+
 	for (unsigned int r = 0; r < (rows - 1); ++r)
 	{
 		for (unsigned int c = 0; c < (cols - 1); ++c)
 		{
 			//Triangle 1
-			auiIndices[index++] = r * cols + c;
-			auiIndices[index++] = (r + 1) * cols + c;
-			auiIndices[index++] = (r + 1) * cols + (c + 1);
+			indices[index++] = r * cols + c;
+			indices[index++] = (r + 1) * cols + c;
+			indices[index++] = (r + 1) * cols + (c + 1);
 
 			// Triangle 2
-			auiIndices[index++] = r * cols + c;
-			auiIndices[index++] = (r + 1) * cols + (c + 1);
-			auiIndices[index++] = r * cols + (c + 1);
+			indices[index++] = r * cols + c;
+			indices[index++] = (r + 1) * cols + (c + 1);
+			indices[index++] = r * cols + (c + 1);
 		}
 	}
 
 	PRNG(rows, cols);
 	
 	// Create Buffers
-	glGenVertexArrays(1, &m_VAO);
-	glBindVertexArray(m_VAO);
-
 	glGenBuffers(1, &m_VBO);
 	glGenBuffers(1, &m_IBO);
-	glGenTextures(1, &m_perlin_texture);
+
+	//Vertex Array object and bind it
+	glGenVertexArrays(1, &m_VAO);
+	glBindVertexArray(m_VAO);
 
 	// Bind it
 	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
-	glBindTexture(GL_TEXTURE_2D, m_perlin_texture); 
 
-	glBufferData(GL_ARRAY_BUFFER, (rows * cols) * sizeof(Vertex), aoVertices, GL_STATIC_DRAW); // VBO
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexCount * sizeof(unsigned int), auiIndices, GL_STATIC_DRAW); //IBO
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, rows, cols, 0, GL_RED, GL_FLOAT, perlin_data); // Texture
+	glBufferData(GL_ARRAY_BUFFER, (rows * cols) * sizeof(Vertex), vertices, GL_STATIC_DRAW); // VBO
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexCount * sizeof(unsigned int), indices, GL_STATIC_DRAW); //IBO
 
+	//Position
 	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
-	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(vec4)));
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(float) * 2));
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	//texcoords
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)sizeof(vec4));
+	//glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(vec4)));
 
+	//Unbind
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	//Texture
+	glGenTextures(1, &m_perlin_texture);
+	glBindTexture(GL_TEXTURE_2D, m_perlin_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, rows, cols, 0, GL_RED, GL_FLOAT, perlin_data); // Texture
+	
+	//Enable blendijng else samples must be exact centre of texels
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	//Set wrap to stop errors at edge of noise sampling
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
 	//glBindTexture(GL_TEXTURE_2D, 0);
 	
-	delete[] aoVertices;
-	delete[] auiIndices;
+	delete[] vertices;
+	delete[] indices;
 	delete[] perlin_data;
 }
 
