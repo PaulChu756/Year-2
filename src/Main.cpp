@@ -136,7 +136,7 @@ void Shader()
 	// m_shader goes into the text file and grabs Position, Colour and texcoord.
 	glBindAttribLocation(0, m_shader, "Position");
 	//glBindAttribLocation(1, m_shader, "Colour");
-	glBindAttribLocation(2, m_shader, "texcoord");
+	glBindAttribLocation(1, m_shader, "texcoord");
 	glLinkProgram(m_shader);
 	
 	//Check if shader works (don't really need it)
@@ -230,11 +230,12 @@ void generateGrid(unsigned int rows, unsigned int cols)
 	glGenVertexArrays(1, &m_VAO);
 	glBindVertexArray(m_VAO);
 
-	// Bind it
+	//Vertex Buffer object
 	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
-
 	glBufferData(GL_ARRAY_BUFFER, (rows * cols) * sizeof(Vertex), vertices, GL_STATIC_DRAW); // VBO
+
+	//Index Buffer object
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexCount * sizeof(unsigned int), indices, GL_STATIC_DRAW); //IBO
 
 	//Position
@@ -277,15 +278,17 @@ void DrawSquare()
 	// Use shader
 	// view_proj_uniform and modelID get the ProjectionView and Model fom text file
 	glUseProgram(m_shader);
-	glActiveTexture(GL_TEXTURE0);
-
+	
 	unsigned int projectionViewUniform = glGetUniformLocation(m_shader, "ProjectionView");
 	unsigned int modelID = glGetUniformLocation(m_shader, "Model");
-	unsigned int texture = glGetUniformLocation(m_shader, "perlin_texture");
+	unsigned int texUniform = glGetUniformLocation(m_shader, "noiseTexture");
 	
 	glUniformMatrix4fv(projectionViewUniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
 	glUniformMatrix4fv(modelID, 1, GL_FALSE, glm::value_ptr(modelMatrix));
-	glUniform1i(texture, 0);
+	glUniform1i(texUniform, 0);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_perlin_texture);
 
 	glBindVertexArray(m_VAO);
 	//// This glpolygonMode, if I turn it on, lines appear, if off, whatever is filled
