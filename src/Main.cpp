@@ -29,6 +29,7 @@ mat4 m_view;
 mat4 m_projection;
 mat4 m_projectionViewMatrix;
 mat4 modelMatrix;
+mat4 uniformTex;
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
@@ -247,9 +248,13 @@ void generateGrid(unsigned int rows, unsigned int cols)
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)sizeof(vec4));
 	//glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(vec4)));
 
+	/*	In order to see our generated data, we are going to create a texture,
+	fill it with the noise data, and display it on our quad*/
+
 	//Unbind
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	// bind data as float for a single channel
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	//Texture
@@ -265,7 +270,8 @@ void generateGrid(unsigned int rows, unsigned int cols)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	//glBindTexture(GL_TEXTURE_2D, 0);
+	//Unbind
+	glBindTexture(GL_TEXTURE_2D, 0);
 	
 	delete[] vertices;
 	delete[] indices;
@@ -282,11 +288,13 @@ void DrawSquare()
 	unsigned int projectionViewUniform = glGetUniformLocation(m_shader, "ProjectionView");
 	unsigned int modelID = glGetUniformLocation(m_shader, "Model");
 	unsigned int texUniform = glGetUniformLocation(m_shader, "noiseTexture");
+
 	
 	glUniformMatrix4fv(projectionViewUniform, 1, GL_FALSE, glm::value_ptr(m_projectionViewMatrix));
 	glUniformMatrix4fv(modelID, 1, GL_FALSE, glm::value_ptr(modelMatrix));
-	glUniform1i(texUniform, 0);
+	glUniformMatrix4fv(texUniform, 1, GL_FALSE, glm::value_ptr(uniformTex));
 
+	glUniform1i(texUniform, 0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, m_perlin_texture);
 
