@@ -1,12 +1,11 @@
 #version 410
 
-in vec2 frag_texcoord;
-
+in vec2 vTexCoord;
 out vec4 out_color;
-uniform sampler2D perlin_texture;
+uniform sampler2D noiseTexture;
 
 void main()
 {
-	out_color = texture(perlin_texture, frag_texcoord).rrrr;
+	out_color = texture(noiseTexture, vTexCoord).rrrr;
 	out_color.a = 1;
 }
