@@ -100,7 +100,6 @@ std::string readShader(std::string rs)
 		{
 			allTheLines += line + '\n';
 		}
-		std::cout << allTheLines;
 		file.close();
 	}
 	else std::cout << "Unable to open file";
@@ -140,14 +139,14 @@ void Shader()
 	
 	//Check if shader works (don't really need it)
 	int success = GL_FALSE;
-	glGetProgramiv(m_shader, GL_LINK_STATUS, &success);
+	glGetShaderiv(m_shader, GL_COMPILE_STATUS, &success);
 	if (success = GL_FALSE)
 	{
 		int infoLogLength = 0;
-		glGetProgramiv(m_shader, GL_INFO_LOG_LENGTH, &infoLogLength);
+		glGetShaderiv(m_shader, GL_INFO_LOG_LENGTH, &infoLogLength);
 		char* infoLog = new char[infoLogLength];
 
-		glGetProgramInfoLog(m_shader, infoLogLength, 0, infoLog);
+		glGetShaderInfoLog(m_shader, infoLogLength, 0, infoLog);
 		printf("Error: Failed to link shader program!\n");
 		printf("%s\n", infoLog);
 		delete[] infoLog;
