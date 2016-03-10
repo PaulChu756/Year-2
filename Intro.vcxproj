@@ -25,6 +25,14 @@
     <ClInclude Include="dep\include\MyApplication.h" />
     <ClInclude Include="dep\include\test.h" />
     <ClInclude Include="dep\include\tiny_obj_loader.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Intro.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="fragmentTextureShader.txt" />
+    <Text Include="vertexshader.txt" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{E1595987-9B83-4A7A-BE59-FBF49119FAFC}</ProjectGuid>

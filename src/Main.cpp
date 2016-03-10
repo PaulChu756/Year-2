@@ -24,12 +24,8 @@ unsigned int indexCount;
 float *perlin_data;
 
 GLFWwindow *window;
-mat4 m_view;
-mat4 m_projection;
 mat4 m_projectionViewMatrix;
 mat4 modelMatrix;
-
-#define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
 struct OpenGLInfo
 {
@@ -44,7 +40,6 @@ std::vector<OpenGLInfo> m_gl_info;
 struct Vertex 
 {
 	vec4 position;
-	//vec4 colour;
 	vec2 texcoord;
 };
 
@@ -77,8 +72,8 @@ int Window()
 	printf_s("GL: %i.%i\n", major, minor);
 
 	// Create window and camera
-	m_view = glm::lookAt(vec3(50, 20, 50), vec3(0), vec3(0, 1, 0));
-	m_projection = glm::perspective(glm::pi<float>()*0.25f, 16 / 9.f, 0.1f, 1000.f); // Don't know the first one, 16 by 9 is the ratio, 0.1f inner, 1000f is outer.
+	mat4 m_view = glm::lookAt(vec3(50, 20, 50), vec3(0), vec3(0, 1, 0));
+	mat4 m_projection = glm::perspective(glm::pi<float>()*0.25f, 16 / 9.f, 0.1f, 1000.f); // Don't know the first one, 16 by 9 is the ratio, 0.1f inner, 1000f is outer.
 	m_projectionViewMatrix = m_projection * m_view;
 
 	return 0;
