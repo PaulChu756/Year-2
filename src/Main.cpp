@@ -45,8 +45,8 @@ std::vector<OpenGLInfo> m_gl_info;
 void generateGrid(unsigned int rows, unsigned int cols)
 {
 	indexCount = (rows - 1) * (cols - 1) * 6;
-	perlin_data = new float[rows * cols];
-	float scale = (1.0f / *perlin_data) * 3;
+	perlin_data = new float[(rows * cols)];
+	float scale = (1.0f / cols) * 3;
 	int octaves = 6;
 
 	Vertex* vertices = new Vertex[rows * cols];
