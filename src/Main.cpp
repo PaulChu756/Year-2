@@ -8,7 +8,6 @@
 #include "tiny_obj_loader.h"
 #include <iostream>
 #include <fstream>
-#include <string>
 
 using glm::vec2;
 using glm::vec3;
@@ -27,6 +26,12 @@ GLFWwindow *window;
 mat4 m_projectionViewMatrix;
 mat4 modelMatrix;
 
+struct Vertex
+{
+	vec4 position;
+	vec2 texcoord;
+};
+
 struct OpenGLInfo
 {
 	unsigned int m_VAO;
@@ -37,11 +42,109 @@ struct OpenGLInfo
 
 std::vector<OpenGLInfo> m_gl_info;
 
-struct Vertex 
+void generateGrid(unsigned int rows, unsigned int cols)
 {
-	vec4 position;
-	vec2 texcoord;
-};
+	indexCount = (rows - 1) * (cols - 1) * 6;
+	perlin_data = new float[rows * cols];
+	float scale = (1.0f / *perlin_data) * 3;
+	int octaves = 6;
+
+	Vertex* vertices = new Vertex[rows * cols];
+	for (unsigned int r = 0; r < rows; ++r)
+	{
+		for (unsigned int c = 0; c < cols; ++c)
+		{
+			// Offset position so that the terrain is centered
+			vertices[r * cols + c].position = vec4(c - cols * 0.5f, 0, r - rows * 0.5f, 1);
+
+			// generate noise here
+			float amplitude = 1.0f;
+			float persistence = 0.3f;
+			perlin_data[c * cols + r] = 0;
+
+			for (int o = 0; o < octaves; ++o)
+			{
+				float freq = powf(2, (float)o);
+				float perlin_sample = glm::perlin(vec2((float)r, (float)c) * scale * freq) * 0.5f + 0.5f;
+				perlin_data[c * rows + r] += perlin_sample * amplitude;
+				amplitude *= persistence;
+			}
+
+			// setting up UV's. 
+			vertices[r * cols + c].texcoord = vec2(c * (1.f / cols), r * (1.f / rows));
+		}
+	}
+
+	unsigned int *indices = new unsigned int[indexCount];
+	unsigned int index = 0;
+
+	for (unsigned int r = 0; r < (rows - 1); ++r)
+	{
+		for (unsigned int c = 0; c < (cols - 1); ++c)
+		{
+			//Triangle 1
+			indices[index++] = r * cols + c;
+			indices[index++] = (r + 1) * cols + c;
+			indices[index++] = (r + 1) * cols + (c + 1);
+
+			// Triangle 2
+			indices[index++] = r * cols + c;
+			indices[index++] = (r + 1) * cols + (c + 1);
+			indices[index++] = r * cols + (c + 1);
+		}
+	}
+
+	//Vertex Array object and bind it
+	glGenVertexArrays(1, &m_VAO);
+	glBindVertexArray(m_VAO);
+
+	// Create Buffers
+	glGenBuffers(1, &m_VBO);
+	glGenBuffers(1, &m_IBO);
+
+	//Vertex Buffer object
+	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
+
+	glBufferData(GL_ARRAY_BUFFER, (rows * cols) * sizeof(Vertex), vertices, GL_STATIC_DRAW); // VBO
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexCount * sizeof(unsigned int), indices, GL_STATIC_DRAW); //IBO
+
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
+
+	//texcoords
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)sizeof(vec4));
+	//glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(vec4)));
+
+	/*	In order to see our generated data, we are going to create a texture,
+	fill it with the noise data, and display it on our quad*/
+
+	//Unbind
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	//Texture
+	glGenTextures(1, &m_perlin_texture);
+	glBindTexture(GL_TEXTURE_2D, m_perlin_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, rows, cols, 0, GL_RED, GL_FLOAT, perlin_data); // Texture
+
+																						   //Enable blendijng else samples must be exact centre of texels
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	//Set wrap to stop errors at edge of noise sampling
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	//Unbind
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	delete[] vertices;
+	delete[] indices;
+	delete[] perlin_data;
+}
 
 int Window()
 {
@@ -72,7 +175,7 @@ int Window()
 	printf_s("GL: %i.%i\n", major, minor);
 
 	// Create window and camera
-	mat4 m_view = glm::lookAt(vec3(50, 20, 50), vec3(0), vec3(0, 1, 0));
+	mat4 m_view = glm::lookAt(vec3(25, 20, 50), vec3(0), vec3(0, 1, 0));
 	mat4 m_projection = glm::perspective(glm::pi<float>()*0.25f, 16 / 9.f, 0.1f, 1000.f); // Don't know the first one, 16 by 9 is the ratio, 0.1f inner, 1000f is outer.
 	m_projectionViewMatrix = m_projection * m_view;
 
@@ -105,11 +208,9 @@ void Shader()
 {
 	// Read in from text file
 	std::string readVS = readShader("vertexshader.txt");
-	//std::string readFS = readShader("fragmentshader.txt");
 	std::string readTFS = readShader("fragmentTextureShader.txt");
 	
 	const char* vsSource = readVS.c_str();
-	//const char* fsSource = readFS.c_str();
 	const char* fsSource = readTFS.c_str();
 	
 	unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -128,7 +229,6 @@ void Shader()
 	glAttachShader(m_shader, fragmentShader);
 	// m_shader goes into the text file and grabs Position, Colour and texcoord.
 	glBindAttribLocation(0, m_shader, "Position");
-	//glBindAttribLocation(1, m_shader, "Colour");
 	glBindAttribLocation(1, m_shader, "TexCoord");
 	glLinkProgram(m_shader);
 	
@@ -150,124 +250,6 @@ void Shader()
 	glDeleteShader(vertexShader);
 }
 
-// Just Math, nothing really to change
-void PRNG(unsigned int rows, unsigned int cols)
-{
-	perlin_data = new float[rows * cols];
-	float scale = (1.0f / *perlin_data) * 3;
-	int octaves = 6;
-
-	for (int x = 0; x < rows; ++x)
-	{
-		for (int y = 0; y < rows; ++y)
-		{
-			// generate noise here
-			float amplitude = 1.0f;
-			float persistence = 0.3f;
-			perlin_data[y * rows + x] = 0;
-
-			for (int o = 0; o < octaves; ++o)
-			{
-				float freq = powf(2, (float)o);
-				float perlin_sample = glm::perlin(vec2((float)x, (float)y) * scale * freq) * 0.5f + 0.5f;
-				perlin_data[y * rows + x] += perlin_sample * amplitude;
-				amplitude *= persistence;
-			}
-		}
-	}
-}
-
-// Stuff has changed.
-void generateGrid(unsigned int rows, unsigned int cols)
-{
-	Vertex* vertices = new Vertex[rows * cols];
-	for (unsigned int r = 0; r < rows; ++r)
-	{
-		for (unsigned int c = 0; c < cols; ++c)
-		{
-			// Offset position so that the terrain is centered
-			vertices[r * cols + c].position = vec4(c - cols * 0.5f, 0, r - rows * 0.5f, 1);
-
-			// setting up UV's. 
-			vertices[r * cols + c].texcoord = vec2(c * (1.f / cols), r * (1.f / rows));
-		}
-	}
-
-	indexCount = (rows - 1) * (cols - 1) * 6;
-	unsigned int* indices = new unsigned int[indexCount];
-	unsigned int index = 0;
-
-	for (unsigned int r = 0; r < (rows - 1); ++r)
-	{
-		for (unsigned int c = 0; c < (cols - 1); ++c)
-		{
-			//Triangle 1
-			indices[index++] = r * cols + c;
-			indices[index++] = (r + 1) * cols + c;
-			indices[index++] = (r + 1) * cols + (c + 1);
-
-			// Triangle 2
-			indices[index++] = r * cols + c;
-			indices[index++] = (r + 1) * cols + (c + 1);
-			indices[index++] = r * cols + (c + 1);
-		}
-	}
-
-	PRNG(rows, cols);
-	
-	//Vertex Array object and bind it
-	glGenVertexArrays(1, &m_VAO);
-	glBindVertexArray(m_VAO);
-
-	// Create Buffers
-	glGenBuffers(1, &m_VBO);
-	glGenBuffers(1, &m_IBO);
-
-	//Vertex Buffer object
-	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-	glBufferData(GL_ARRAY_BUFFER, (rows * cols) * sizeof(Vertex), vertices, GL_STATIC_DRAW); // VBO
-
-	//Index Buffer object
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexCount * sizeof(unsigned int), indices, GL_STATIC_DRAW); //IBO
-
-	//Position
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
-
-	//texcoords
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)sizeof(vec4));
-	//glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(vec4)));
-
-	/*	In order to see our generated data, we are going to create a texture,
-	fill it with the noise data, and display it on our quad*/
-
-	//Unbind
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-	//Texture
-	glGenTextures(1, &m_perlin_texture);
-	glBindTexture(GL_TEXTURE_2D, m_perlin_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, rows, cols, 0, GL_RED, GL_FLOAT, perlin_data); // Texture
-	
-	//Enable blendijng else samples must be exact centre of texels
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	//Set wrap to stop errors at edge of noise sampling
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-	//Unbind
-	glBindTexture(GL_TEXTURE_2D, 0);
-	
-	delete[] vertices;
-	delete[] indices;
-	delete[] perlin_data;
-}
 
 // Stuff has changed.
 void DrawSquare()
@@ -298,16 +280,32 @@ void DrawSquare()
 	glUseProgram(0);
 }
 
+void Control()
+{
+	if (glfwGetKey(window, GLFW_KEY_A))
+		modelMatrix = glm::translate(modelMatrix, glm::vec3(-1, 0, 0));
+	if (glfwGetKey(window, GLFW_KEY_D))
+		modelMatrix = glm::translate(modelMatrix, glm::vec3(1, 0, 0));
+	if (glfwGetKey(window, GLFW_KEY_W))
+		modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 1, 0));
+	if (glfwGetKey(window, GLFW_KEY_S))
+		modelMatrix = glm::translate(modelMatrix, glm::vec3(0, -1, 0));
+	if (glfwGetKey(window, GLFW_KEY_Q))
+		modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0, -1));
+	if (glfwGetKey(window, GLFW_KEY_E))
+		modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0, 1));
+	if (glfwGetKey(window, GLFW_KEY_Z))
+		modelMatrix *= glm::rotate(0.05f, glm::vec3(0, 0, -1));
+	if (glfwGetKey(window, GLFW_KEY_X))
+		modelMatrix *= glm::rotate(0.05f, glm::vec3(0, 0, 1));
+}
+
 // Stuff has changed.
 int main()
 {
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector <tinyobj::material_t> materials;
 	std::string err;
-
-	//tinyobj::LoadObj(shapes, materials, err, "./model/dragon.obj");
-	//tinyobj::LoadObj(shapes, materials, err, "./model/bunny.obj");
-	//tinyobj::LoadObj(shapes, materials, err, "./model/buddha.obj");
 
 	Window();
 	Shader();
@@ -333,20 +331,3 @@ int main()
 	glfwTerminate();
 	return 0;
 }
-
-/*if (glfwGetKey(window, GLFW_KEY_A))
-modelMatrix = glm::translate(modelMatrix, glm::vec3(-1, 0, 0));
-if (glfwGetKey(window, GLFW_KEY_D))
-modelMatrix = glm::translate(modelMatrix, glm::vec3(1, 0, 0));
-if (glfwGetKey(window, GLFW_KEY_W))
-modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 1, 0));
-if (glfwGetKey(window, GLFW_KEY_S))
-modelMatrix = glm::translate(modelMatrix, glm::vec3(0, -1, 0));
-if (glfwGetKey(window, GLFW_KEY_Q))
-modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0, -1));
-if (glfwGetKey(window, GLFW_KEY_E))
-modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0, 1));
-if (glfwGetKey(window, GLFW_KEY_Z))
-modelMatrix *= glm::rotate(0.05f, glm::vec3(0, 0, -1));
-if (glfwGetKey(window, GLFW_KEY_X))
-modelMatrix *= glm::rotate(0.05f, glm::vec3(0, 0, 1));*/

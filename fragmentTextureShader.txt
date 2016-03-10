@@ -6,6 +6,6 @@ uniform sampler2D noiseTexture;
 
 void main()
 {
-	out_color = vec4(texture(noiseTexture, vTexCoord).rrr, 1);
+	out_color = texture(noiseTexture, vTexCoord).rrrr;
 	out_color.a = 1;
 }

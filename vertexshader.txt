@@ -6,16 +6,16 @@ layout(location=1) in vec2 TexCoord;
 out vec2 vTexCoord;
 
 uniform mat4 ProjectionView;
+uniform mat4 Model;
 uniform sampler2D noiseTexture;
 uniform float heightScale = 10;
 
 void main() 
 { 
+	vec4 pos = Position;
 	vTexCoord = TexCoord;
 
-	//sample height
-	float height = texture(noiseTexture, TexCoord).r;
+	pos.y += texture(noiseTexture, TexCoord).r * heightScale;
 
-	// offsets Y by the height and heightScale
-	gl_Position = ProjectionView * (Position + vec4(0,height * heightScale,0,0)); 
+	gl_Position = ProjectionView * pos; 
 }
